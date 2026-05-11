@@ -1,20 +1,28 @@
 #[derive(Debug)]
-pub enum Token<'a> {
+pub enum Token {
     Identifier(Identifier),
+    Type(Type),
     String(String),
+    Character(char),
     Integer(i64),
     Float(f64),
     Boolean(bool),
     NewLine,
     Comma,
+    Period,
     Unknown(char),
     Keyword(Keyword),
-    Operation(Operation<'a>),
-    BlockDelimeter(BlockDelimeter<'a>),
+    Operation(Operation),
+    BlockDelimeter(BlockDelimeter),
 }
 
 #[derive(Debug)]
 pub struct Identifier {
+    pub symbol: String
+}
+
+#[derive(Debug)]
+pub struct Type {
     pub symbol: String
 }
 
@@ -24,12 +32,12 @@ pub struct Keyword {
 }
 
 #[derive(Debug)]
-pub struct Operation<'a> {
-    pub operation: &'a str
+pub struct Operation {
+    pub operation: String
 }
 
 #[derive(Debug)]
-pub struct BlockDelimeter<'a> {
-    pub delimeter: &'a str,
+pub struct BlockDelimeter {
+    pub delimeter: String,
     pub is_close: bool
 }

@@ -3,33 +3,36 @@ use std::collections::HashMap;
 pub use crate::lexer::types::*;
 
 
-pub fn tokenize<'a>(code: &'a str) -> Result<Vec<Token<'a>>, &'static str> {
+pub fn tokenize<'a>(code: &'a str) -> Result<Vec<Token>, &'static str> {
     let mut tokens = vec![];
     let keywords = Trie::keywords();
+    let types = Trie::types();
+    let operators = Trie::operators();
 
     let chars: Vec<_> = code.chars().collect();
     let mut i = 0;
 
     while i < chars.len() {
         match chars[i] {
-            '+' => tokens.push(Token::Operation(Operation { operation: "+" })),
-            '-' => tokens.push(Token::Operation(Operation { operation: "-" })),
-            '*' => tokens.push(Token::Operation(Operation { operation: "*" })),
-            '/' => tokens.push(Token::Operation(Operation { operation: "/" })),
-            '=' => tokens.push(Token::Operation(Operation { operation: "=" })),
-            '(' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: "(", is_close: false })),
-            ')' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: ")", is_close: true })),
-            '[' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: "[", is_close: false })),
-            ']' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: "]", is_close: true })),
-            '{' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: "{", is_close: false })),
-            '}' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: "}", is_close: true })),
+            // the unary - and + will be handled later down
+            '+' => tokens.push(Token::Operation(Operation { operation: String::from("+") })),
+            '-' => tokens.push(Token::Operation(Operation { operation: String::from("-") })),
+            '*' => tokens.push(Token::Operation(Operation { operation: String::from("*") })),
+            '^' => tokens.push(Token::Operation(Operation { operation: String::from("^") })),
+            '/' => tokens.push(Token::Operation(Operation { operation: String::from("/") })),
+            '(' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: String::from("("), is_close: false })),
+            ')' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: String::from(")"), is_close: true })),
+            '[' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: String::from("["), is_close: false })),
+            ']' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: String::from("]"), is_close: true })),
+            '{' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: String::from("{"), is_close: false })),
+            '}' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: String::from("}"), is_close: true })),
             c if c.is_digit(10) => {
                 let mut num = String::new();
                 let mut has_dot = false;
 
                 while i < chars.len() && (chars[i].is_digit(10) || chars[i] == '.') {
                     if chars[i] == '.' && has_dot {
-                        return Err("Float number has 2 dots");
+                        break
                     }
                     if chars[i] == '.' {
                         has_dot = true;
@@ -45,6 +48,7 @@ pub fn tokenize<'a>(code: &'a str) -> Result<Vec<Token<'a>>, &'static str> {
                 } else {
                     return Err("Could not parse num as any number type");
                 }
+
                 continue
             }
             c if c.is_alphabetic() => {
@@ -56,6 +60,10 @@ pub fn tokenize<'a>(code: &'a str) -> Result<Vec<Token<'a>>, &'static str> {
 
                 if keywords.contains(&ident) {
                     tokens.push(Token::Keyword(Keyword { keyword: ident }))
+                } else if types.contains(&ident) {
+                    tokens.push(Token::Type(Type { symbol: ident }))  
+                } else if operators.contains(&ident) {
+                    tokens.push(Token::Operation(Operation { operation: ident }))  
                 } else {
                     tokens.push(Token::Identifier(Identifier { symbol: ident }));
                 }
@@ -68,13 +76,67 @@ pub fn tokenize<'a>(code: &'a str) -> Result<Vec<Token<'a>>, &'static str> {
                     string.push(chars[i]);
                     i += 1;
                 }
+                if i == chars.len() && string.chars().last().unwrap() != '"' {
+                    return Err("Unexpected EOF")
+                }
+
+                tokens.push(Token::String(string));
+            }
+            c if c == '\'' => {
+                i += 1;
+                let mut string = String::new();
+                while i < chars.len() && chars[i] != '\'' {
+                    string.push(chars[i]);
+                    i += 1;
+                }
+                if i == chars.len() && string.chars().last().unwrap() != '\'' {
+                    return Err("Unexpected EOF")
+                }
 
                 tokens.push(Token::String(string));
             }
             c if c == ':' => {
                 let tmp = i + 1;
-                if tmp < chars.len() && chars[tmp] == '=' {
-                    tokens.push(Token::String(String::from(":=")));
+                if tmp < chars.len() {
+                    match chars[tmp] {
+                        '=' =>  { tokens.push(Token::Operation(Operation { operation: String::from(":=") })); i += 1 }
+                        _ => {}
+                    }
+                }
+            }
+            c if c == '=' => {
+                let tmp = i + 1;
+                if tmp < chars.len() {
+                    match chars[tmp] {
+                        '=' =>  { tokens.push(Token::Operation(Operation { operation: String::from("==")} )); i += 1 }
+                        '>' =>  { tokens.push(Token::Operation(Operation { operation: String::from("=>")} )); i += 1 }
+                        _ => { tokens.push(Token::Operation(Operation { operation: String::from("=") })) }
+                    }
+                } else {
+                    tokens.push(Token::Operation(Operation { operation: String::from("=") }))
+                }
+            }
+            c if c == '<' => {
+                let tmp = i + 1;
+                if tmp < chars.len() {
+                    match chars[tmp] {
+                        '=' =>  { tokens.push(Token::Operation(Operation { operation: String::from("<=")} )); i += 1 }
+                        '>' =>  { tokens.push(Token::Operation(Operation { operation: String::from("<>")} )); i += 1 }
+                        _ =>  { tokens.push(Token::Operation(Operation { operation: String::from("<") })) }
+                    }
+                } else {
+                    tokens.push(Token::Operation(Operation { operation: String::from("<") }))
+                }
+            }
+            c if c == '>' => {
+                let tmp = i + 1;
+                if tmp < chars.len() {
+                    match chars[tmp] {
+                        '=' =>  { tokens.push(Token::String(String::from(">="))); i += 1 }
+                        _ => { tokens.push(Token::String(String::from(">"))) }
+                    }
+                } else {
+                    tokens.push(Token::String(String::from(">")))
                 }
             }
             '\n' => {
@@ -82,6 +144,9 @@ pub fn tokenize<'a>(code: &'a str) -> Result<Vec<Token<'a>>, &'static str> {
             }
             ',' => {
                 tokens.push(Token::Comma);
+            }
+            '.' => {
+                tokens.push(Token::Period);
             }
             ' ' => {}
             c => {
@@ -97,7 +162,7 @@ pub fn tokenize<'a>(code: &'a str) -> Result<Vec<Token<'a>>, &'static str> {
 
 #[derive(Debug)]
 pub struct Trie {
-    children: HashMap<char, Trie>,
+    children: HashMap<u8, Trie>,
     is_leaf: bool,
 }
 
@@ -107,23 +172,31 @@ impl Trie {
     }
 
     pub fn insert(&mut self, text: &str) {
+        self.insert_bytes(text.as_bytes());
+    }
+
+    fn insert_bytes(&mut self, text: &[u8]) {
         if text.len() > 0 {
-            if let None = self.children.get(&text.chars().nth(0).unwrap()) {
-                self.children.insert(text.chars().nth(0).unwrap(), Trie::new());
+            if let None = self.children.get(&text[0]) {
+                self.children.insert(text[0], Trie::new());
                 self.is_leaf = false;
             }
-            let child = self.children.get_mut(&text.chars().nth(0).unwrap()).unwrap();
-            child.insert(&text[1..text.len()]);
+            let child = self.children.get_mut(&text[0]).unwrap();
+            child.insert_bytes(&text[1..text.len()]);
         }
     }
 
-    fn contains(&self, text: &str) -> bool {
+    pub fn contains(&self, text: &str) -> bool {
+        self.contains_bytes(text.as_bytes())
+    }
+
+    fn contains_bytes(&self, text: &[u8]) -> bool {
         if self.is_leaf && text.len() == 0 {
             return true
         } else if self.is_leaf {
             return false
-        } else if let Some(child) = self.children.get(&text.chars().nth(0).unwrap()) {
-            return child.contains(&text[1..text.len()]);
+        } else if let Some(child) = self.children.get(&text[0]) {
+            return child.contains_bytes(&text[1..text.len()]);
         };
         
         false
@@ -131,12 +204,35 @@ impl Trie {
 
     fn keywords() -> Trie {
         Trie::from(vec![
-            "escreva",
-            "imprima",
-            "leia_texto",
-            "leia_inteiro",
-            "leia_numero",
+            // these are loaded in as a "std lib"
+            // "escreva",
+            // "imprima",
+            // "leia_texto",
+            // "leia_inteiro",
+            // "leia_numero",
             "var",
+            "falso",
+            "verdadeiro",
+            "e",
+            "ou",
+            "não", // ew, a tilde
+        ])
+    }
+    fn types() -> Trie {
+        Trie::from(vec![
+            "Inteiro",
+            "Real",
+            "Texto",
+            "Lógico",
+            "Caractere",
+            //"Tupla" é deduzida no proximo passo da compilação
+            "Lista",
+        ])
+    }
+    fn operators() -> Trie {
+        Trie::from(vec![
+            "div",
+            "mod"
         ])
     }
 }
