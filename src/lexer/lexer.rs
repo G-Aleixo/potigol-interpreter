@@ -31,11 +31,20 @@ pub fn tokenize<'a>(code: &'a str) -> Result<Vec<Token<'a>>, &'static str> {
                     if chars[i] == '.' && has_dot {
                         return Err("Float number has 2 dots");
                     }
-                    has_dot = true;
+                    if chars[i] == '.' {
+                        has_dot = true;
+                    }
+
                     num.push(chars[i]);
                     i += 1;
                 }
-                tokens.push(Token::Integer(num.parse().expect(format!("Failed to parse {num}").as_str())));
+                if let Ok(float) = num.parse() {
+                    tokens.push(Token::Float(float));
+                } else if let Ok(int) = num.parse() {
+                    tokens.push(Token::Integer(int));
+                } else {
+                    return Err("Could not parse num as any number type");
+                }
                 continue
             }
             c if c.is_alphabetic() => {
