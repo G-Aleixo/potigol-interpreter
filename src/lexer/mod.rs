@@ -55,7 +55,7 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
             }
             c if c.is_alphabetic() => {
                 let mut ident = String::new();
-                while i < chars.len() && chars[i].is_alphanumeric() {
+                while i < chars.len() && (chars[i].is_alphanumeric() || matches!(chars[i], '_' | '-')) {
                     ident.push(chars[i]);
                     i += 1;
                 }
@@ -99,9 +99,14 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
             }
             ':' => {
                 let tmp = i + 1;
-                if tmp < chars.len() && chars[tmp] == '=' {
-                    tokens.push(Token::Operation(Operation { operation: String::from(":=") }));
-                    i += 1
+                if tmp < chars.len() {
+                    match chars[tmp] {
+                        '=' => { tokens.push(Token::Operation(Operation { operation: String::from(":=") })); i += 1 }
+                        ':' => { tokens.push(Token::Operation(Operation { operation: String::from("::") })); i += 1 }
+                        _ => { tokens.push(Token::Colon) }
+                    }
+                } else {
+                    tokens.push(Token::Colon);
                 }
             }
             '=' => {
@@ -215,6 +220,23 @@ impl Trie {
             "e",
             "ou",
             "não", // ew, a tilde
+            "se",
+            "então",
+            "senão",
+            "senãose",
+            "fim",
+            "escolha",
+            "caso",
+            "para",
+            "de",
+            "até",
+            "faça",
+            "passo",
+            "em",
+            "enquanto",
+            "retorne",
+            "tipo",
+            "gere",
         ])
     }
     fn types() -> Trie {

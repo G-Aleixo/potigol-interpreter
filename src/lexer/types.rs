@@ -10,6 +10,7 @@ pub enum Token {
     NewLine,
     Comma,
     Period,
+    Colon,
     Unknown(char),
     Keyword(Keyword),
     Operation(Operation),
