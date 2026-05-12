@@ -1,4 +1,4 @@
-use potigol_interpreter::lexer::lexer::tokenize;
+use potigol_interpreter::lexer::tokenize;
 
 
 fn main() {
