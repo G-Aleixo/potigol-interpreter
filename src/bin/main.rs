@@ -11,7 +11,7 @@ fn main() {
 
     println!("{result:#?}");
 
-    let tokens = tokenize("-2 ^ 2").unwrap();
+    let tokens = tokenize("var x := 2 * 2 + 3 ^ 7 > 2").unwrap();
 
     println!("{tokens:?}");
     println!("{:?}", parser::Parser::new(tokens).parse().unwrap());

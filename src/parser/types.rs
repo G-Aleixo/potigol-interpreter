@@ -30,6 +30,12 @@ pub enum BinOp {
     Or,
     LogicNot,
     DotAccess,
+    Equal,
+    NotEqual,
+    Greater,
+    GreaterOrEqual,
+    Less,
+    LessOrEqual,
 }
 
 #[derive(Debug, Clone)]
@@ -61,6 +67,12 @@ impl From<&String> for BinOp {
             "ou" => Self::Or,
             "nao" => Self::LogicNot,
             "." => Self::DotAccess,
+            "==" => Self::Equal,
+            "<>" => Self::NotEqual,
+            ">" => Self::Greater,
+            ">=" => Self::GreaterOrEqual,
+            "<" => Self::Less,
+            "<=" => Self::LessOrEqual,
             v => panic!("Invalid infix operator {v}")
         }
     }
@@ -118,6 +130,12 @@ impl std::fmt::Display for BinOp {
             BinOp::Or => write!(f, "|"),
             BinOp::LogicNot => write!(f, "!"),
             BinOp::DotAccess => write!(f, "."),
+            BinOp::Equal => write!(f, "=="),
+            BinOp::NotEqual => write!(f, "<>"),
+            BinOp::Greater => write!(f, ">"),
+            BinOp::GreaterOrEqual => write!(f, ">="),
+            BinOp::Less => write!(f, "<"),
+            BinOp::LessOrEqual => write!(f, "<="),
         }
     }
 }

@@ -47,7 +47,7 @@ impl Parser {
                                     let name = ident.clone();
 
                                     self.expect(Token::Operation(":=".to_string()))?;
-                                    let value = self.parse_expr()?;
+                                    let value = self.parse_expr(0)?;
                                     if !self.is_eot() { self.expect(Token::NewLine)?; }
 
                                     return Ok(Stmt::VarAssignment(name, value))
@@ -65,20 +65,10 @@ impl Parser {
     }
 
     fn parse_expr_stmt(&mut self) -> Result<Stmt, ParseError> {
-        Ok(Stmt::ExprStmt(self.expr_bp(0)?))
+        Ok(Stmt::ExprStmt(self.parse_expr(0)?))
     }
 
-    fn parse_expr(&mut self) -> Result<Expr, ParseError> {
-        let token = self.next().expect("Unexpected EOF");
-    
-        if let Token::Float(token) = token {
-            return Ok(Expr::Literal(Value::Float(*token)));
-        }
-
-        Err(ParseError::UnexpectedToken)
-    }
-
-    fn expr_bp(&mut self, min_bp: u8) -> Result<Expr, ParseError>{
+    fn parse_expr(&mut self, min_bp: u8) -> Result<Expr, ParseError>{
         let token = match self.next() {
             Some(tok) => tok,
             None => return Err(ParseError::UnexpectedEOF)
@@ -95,14 +85,14 @@ impl Parser {
             Token::Keyword(keyword) => {
                 let kw = keyword.clone();
                 let ((), r_bp) = prefix_binding_power(&kw);
-                let rhs = self.expr_bp(r_bp)?;
+                let rhs = self.parse_expr(r_bp)?;
 
                 Expr::Unary((&kw).into(), Box::new(rhs))
             },
             Token::Operation(op) => {
                 let op = op.clone();
                 let ((), r_bp) = prefix_binding_power(&op);
-                let rhs = self.expr_bp(r_bp)?;
+                let rhs = self.parse_expr(r_bp)?;
 
                 Expr::Unary((&op).into(), Box::new(rhs))
             },
@@ -114,7 +104,7 @@ impl Parser {
                 Some(tok) => match tok {
                     Token::Period => ".".to_string(),
                     Token::Keyword(keyword) => keyword.clone(),
-                    Token::Operation(op) => op.clone(),
+                    Token::Operation(op) => {op.clone()},
                     _ => return Err(ParseError::UnexpectedToken)
                 }
                 None => break
@@ -128,7 +118,7 @@ impl Parser {
 
             self.next();
 
-            let rhs = self.expr_bp(r_bp)?;
+            let rhs = self.parse_expr(r_bp)?;
 
             lhs = Expr::Binary(Box::new(lhs), (&op).into(), Box::new(rhs));
         }

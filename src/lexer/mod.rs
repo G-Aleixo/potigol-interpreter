@@ -137,11 +137,11 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
                 let tmp = i + 1;
                 if tmp < chars.len() {
                     match chars[tmp] {
-                        '=' =>  { tokens.push(Token::String(String::from(">="))); i += 1 }
-                        _ => { tokens.push(Token::String(String::from(">"))) }
+                        '=' =>  { tokens.push(Token::Operation(String::from(">="))); i += 1 }
+                        _ => { tokens.push(Token::Operation(String::from(">"))) }
                     }
                 } else {
-                    tokens.push(Token::String(String::from(">")))
+                    tokens.push(Token::Operation(String::from(">")))
                 }
             }
             '\n' => {
