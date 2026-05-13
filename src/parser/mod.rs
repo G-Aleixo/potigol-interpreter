@@ -73,6 +73,7 @@ impl Parser {
             Some(tok) => tok,
             None => return Err(ParseError::UnexpectedEOF)
         };
+        println!("{token:?}");
         let mut lhs = match token {
             Token::Identifier(ident) => Expr::Variable(ident.clone()),
             Token::String(str) => Expr::Literal(Value::String(str.clone())),
@@ -104,18 +105,38 @@ impl Parser {
             _ => return Err(ParseError::UnexpectedToken)
         };
 
+        println!("lhs {lhs:?}");
+
         loop {
             let op = match self.peek() {
                 Some(tok) => match tok {
                     Token::Period => ".".to_string(),
                     Token::Keyword(keyword) => keyword.clone(),
                     Token::Operation(op) => op.clone(),
-                    Token::BlockDelimeter(block, true) => block.clone(),
+                    Token::BlockDelimeter(block, _) => block.clone(),
                     _ => return Err(ParseError::UnexpectedToken)
                 }
                 None => break
             };
 
+            println!("op {op:?}");
+
+            if let Some((l_bp, ())) = postfix_binding_power(&op) {
+                if l_bp < min_bp {
+                    break;
+                }
+
+                self.next();
+
+                lhs = if op == "[" {
+                    let rhs = self.parse_expr(0)?;
+                    self.expect(Token::BlockDelimeter("]".to_owned(), true))?;
+                    Expr::Binary(Box::new(lhs), (&op).into(), Box::new(rhs))
+                } else {
+                    Expr::Unary((&op).into(), Box::new(lhs))
+                };
+                continue;
+            }
 
             if let Some((l_bp, r_bp)) = infix_binding_power(&op) {
                 if l_bp < min_bp {
@@ -181,7 +202,8 @@ fn infix_binding_power(op: &str) -> Option<(u8, u8)> {
         "*" | "/"   => (11, 12),
         // unary "+" "-" => ((), 13)
         "^"         => (16, 15),
-        "."         => (18, 17),
+        // index "[" => (17, ())
+        "."         => (20, 19),
         _ => { return None }
     })
 }
@@ -193,6 +215,13 @@ fn prefix_binding_power(op: &str) -> ((), u8) {
 
         op => panic!("Invalid op {op:?}")
     }
+}
+
+fn postfix_binding_power(op: &str) -> Option<(u8, ())> {
+    Some(match op {
+        "[" => (17, ()),
+        _ => {return None}
+    })
 }
 
 #[cfg(test)]
@@ -227,5 +256,26 @@ mod tests {
         let mut parser = Parser::new(lexer::tokenize("2 * 2 * 2 + 3 ^ 2 ^ 1").unwrap());
 
         assert_eq!(format!("{:?}", parser.parse().unwrap()[0]), "ExprStmt((+ (* (* 2 2) 2) (^ 3 (^ 2 1))))");
+    }
+
+    #[test]
+    fn parenthesis() {
+        let mut parser = Parser::new(lexer::tokenize("7.2 * (2 - 6)").unwrap());
+
+        assert_eq!(format!("{:?}", parser.parse().unwrap()[0]), "ExprStmt((* 7.2 (- 2 6)))");
+    }
+
+    #[test]
+    fn prefix() {
+        let mut parser = Parser::new(lexer::tokenize("-2 ^ 3").unwrap());
+
+        assert_eq!(format!("{:?}", parser.parse().unwrap()[0]), "ExprStmt((- (^ 2 3)))");
+    }
+
+    #[test]
+    fn postfix() {
+        let mut parser = Parser::new(lexer::tokenize("-2 + arr[1]").unwrap());
+
+        assert_eq!(format!("{:?}", parser.parse().unwrap()[0]), "ExprStmt((+ (- 2) ([ arr 1)))");
     }
 }

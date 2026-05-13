@@ -28,7 +28,6 @@ pub enum BinOp {
     Pow,
     And,
     Or,
-    LogicNot,
     DotAccess,
     Equal,
     NotEqual,
@@ -36,6 +35,7 @@ pub enum BinOp {
     GreaterOrEqual,
     Less,
     LessOrEqual,
+    Index,
 }
 
 #[derive(Debug, Clone)]
@@ -65,7 +65,6 @@ impl From<&String> for BinOp {
             "mod" => Self::Mod,
             "e" => Self::And,
             "ou" => Self::Or,
-            "nao" => Self::LogicNot,
             "." => Self::DotAccess,
             "==" => Self::Equal,
             "<>" => Self::NotEqual,
@@ -73,6 +72,7 @@ impl From<&String> for BinOp {
             ">=" => Self::GreaterOrEqual,
             "<" => Self::Less,
             "<=" => Self::LessOrEqual,
+            "[" => Self::Index,
             v => panic!("Invalid infix operator {v}")
         }
     }
@@ -96,7 +96,7 @@ impl std::fmt::Debug for Expr {
             Expr::Literal(value) => write!(f, "{value}"),
             Expr::Variable(var) => write!(f, "{var}"),
             Expr::Binary(expr1, bin_op, expr2) => write!(f, "({bin_op} {expr1:?} {expr2:?})"),
-            Expr::Unary(unary_op, expr) => write!(f, "{unary_op} {expr:?}"),
+            Expr::Unary(unary_op, expr) => write!(f, "({unary_op} {expr:?})"),
             Expr::Call(_, _exprs) => todo!(),
             Expr::Lambda(_items, _expr) => todo!(),
             Expr::List(_exprs) => todo!(),
@@ -128,7 +128,6 @@ impl std::fmt::Display for BinOp {
             BinOp::Pow => write!(f, "^"),
             BinOp::And => write!(f, "&"),
             BinOp::Or => write!(f, "|"),
-            BinOp::LogicNot => write!(f, "!"),
             BinOp::DotAccess => write!(f, "."),
             BinOp::Equal => write!(f, "=="),
             BinOp::NotEqual => write!(f, "<>"),
@@ -136,6 +135,7 @@ impl std::fmt::Display for BinOp {
             BinOp::GreaterOrEqual => write!(f, ">="),
             BinOp::Less => write!(f, "<"),
             BinOp::LessOrEqual => write!(f, "<="),
+            BinOp::Index => write!(f, "["),
         }
     }
 }
