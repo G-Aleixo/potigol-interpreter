@@ -52,7 +52,7 @@ impl Parser {
 
                                     return Ok(Stmt::VarAssignment(name, value))
                                 };
-                                return Err(ParseError::UnexpectedToken)
+                                Err(ParseError::UnexpectedToken)
                             }
                             keyword => { panic!("Unknown keyword \"{keyword:?}\" found") }
                         }
@@ -65,17 +65,75 @@ impl Parser {
     }
 
     fn parse_expr_stmt(&mut self) -> Result<Stmt, ParseError> {
-        todo!()
+        Ok(Stmt::ExprStmt(self.expr_bp(0)?))
     }
 
     fn parse_expr(&mut self) -> Result<Expr, ParseError> {
-        let token = self.next().unwrap();
+        let token = self.next().expect("Unexpected EOF");
     
         if let Token::Float(token) = token {
             return Ok(Expr::Literal(Value::Float(*token)));
         }
 
         Err(ParseError::UnexpectedToken)
+    }
+
+    fn expr_bp(&mut self, min_bp: u8) -> Result<Expr, ParseError>{
+        let token = match self.next() {
+            Some(tok) => tok,
+            None => return Err(ParseError::UnexpectedEOF)
+        };
+        let mut lhs = match token {
+            Token::Identifier(ident) => Expr::Variable(ident.clone()),
+            Token::String(str) => Expr::Literal(Value::String(str.clone())),
+            Token::Character(char) => Expr::Literal(Value::String(char.to_string())),
+            Token::Integer(int) => Expr::Literal(Value::Integer(*int)),
+            Token::Float(float) => Expr::Literal(Value::Float(*float)),
+            Token::Boolean(bool) => Expr::Literal(Value::Boolean(*bool)),
+            
+            
+            Token::Keyword(keyword) => {
+                let kw = keyword.clone();
+                let ((), r_bp) = prefix_binding_power(&kw);
+                let rhs = self.expr_bp(r_bp)?;
+
+                Expr::Unary((&kw).into(), Box::new(rhs))
+            },
+            Token::Operation(op) => {
+                let op = op.clone();
+                let ((), r_bp) = prefix_binding_power(&op);
+                let rhs = self.expr_bp(r_bp)?;
+
+                Expr::Unary((&op).into(), Box::new(rhs))
+            },
+            _ => return Err(ParseError::UnexpectedToken)
+        };
+
+        loop {
+            let op = match self.peek() {
+                Some(tok) => match tok {
+                    Token::Period => ".".to_string(),
+                    Token::Keyword(keyword) => keyword.clone(),
+                    Token::Operation(op) => op.clone(),
+                    _ => return Err(ParseError::UnexpectedToken)
+                }
+                None => break
+            };
+
+            let (l_bp, r_bp) = infix_binding_power(&op);
+
+            if l_bp < min_bp {
+                break;
+            }
+
+            self.next();
+
+            let rhs = self.expr_bp(r_bp)?;
+
+            lhs = Expr::Binary(Box::new(lhs), (&op).into(), Box::new(rhs));
+        }
+
+        Ok(lhs)
     }
 
     fn next(&mut self) -> Option<&Token> {
@@ -107,5 +165,66 @@ impl Parser {
 
     fn is_eot(&self) -> bool {
         self.pos >= self.tokens.len()
+    }
+}
+
+fn infix_binding_power(op: &str) -> (u8, u8) {
+    match op {
+        "ou"        => (1, 2),
+        "e"         => (3, 4),
+        // "não"  => ((), 5)
+        "==" | "<>" |
+        ">" | ">=" |
+        "<" | "<=" => (7, 8),
+        "+" | "-"   => (9, 10),
+        "div" | "mod" |
+        "*" | "/"   => (11, 12),
+        // unary "+" "-" => ((), 13)
+        "^"         => (16, 15),
+        "."         => (18, 17),
+        _ => todo!()
+    }
+}
+
+fn prefix_binding_power(op: &str) -> ((), u8) {
+    match op {
+        "não" => ((), 5),
+        "+" | "-" => ((), 13),
+
+        op => panic!("Invalid op {op:?}")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::lexer;
+    use super::*;
+
+    #[test]
+    #[should_panic = "Unexpected EOF"]
+    fn incomplete_var_assignment() {
+        let mut parser = Parser::new(lexer::tokenize("var abc := ").unwrap());
+        parser.parse().unwrap();
+    }
+
+    #[test]
+    fn two_plus_two() {
+        let mut parser = Parser::new(lexer::tokenize("2 + 2").unwrap());
+
+        assert_eq!(format!("{:?}", parser.parse().unwrap()[0]), "ExprStmt((+ 2 2))");
+    }
+
+    #[test]
+    fn precedence() {
+        let mut parser = Parser::new(lexer::tokenize("2 + 2 * 4 ^ 1.2").unwrap());
+
+        assert_eq!(format!("{:?}", parser.parse().unwrap()[0]), "ExprStmt((+ 2 (* 2 (^ 4 1.2))))");
+    }
+
+    #[test]
+    fn handed_precedence() {
+        let mut parser = Parser::new(lexer::tokenize("2 * 2 * 2 + 3 ^ 2 ^ 1").unwrap());
+
+        assert_eq!(format!("{:?}", parser.parse().unwrap()[0]), "ExprStmt((+ (* (* 2 2) 2) (^ 3 (^ 2 1))))");
     }
 }
