@@ -81,6 +81,11 @@ impl Parser {
             Token::Float(float) => Expr::Literal(Value::Float(*float)),
             Token::Boolean(bool) => Expr::Literal(Value::Boolean(*bool)),
             
+            Token::BlockDelimeter(block, false) if block == "(" => {
+                let lhs = self.parse_expr(0)?;
+                self.expect(Token::BlockDelimeter(")".to_string(), true))?;
+                lhs
+            }
             
             Token::Keyword(keyword) => {
                 let kw = keyword.clone();
@@ -104,23 +109,28 @@ impl Parser {
                 Some(tok) => match tok {
                     Token::Period => ".".to_string(),
                     Token::Keyword(keyword) => keyword.clone(),
-                    Token::Operation(op) => {op.clone()},
+                    Token::Operation(op) => op.clone(),
+                    Token::BlockDelimeter(block, true) => block.clone(),
                     _ => return Err(ParseError::UnexpectedToken)
                 }
                 None => break
             };
 
-            let (l_bp, r_bp) = infix_binding_power(&op);
 
-            if l_bp < min_bp {
-                break;
+            if let Some((l_bp, r_bp)) = infix_binding_power(&op) {
+                if l_bp < min_bp {
+                    break;
+                }
+
+                self.next();
+
+                let rhs = self.parse_expr(r_bp)?;
+
+                lhs = Expr::Binary(Box::new(lhs), (&op).into(), Box::new(rhs));
+                continue;
             }
 
-            self.next();
-
-            let rhs = self.parse_expr(r_bp)?;
-
-            lhs = Expr::Binary(Box::new(lhs), (&op).into(), Box::new(rhs));
+            break;
         }
 
         Ok(lhs)
@@ -158,8 +168,8 @@ impl Parser {
     }
 }
 
-fn infix_binding_power(op: &str) -> (u8, u8) {
-    match op {
+fn infix_binding_power(op: &str) -> Option<(u8, u8)> {
+    Some(match op {
         "ou"        => (1, 2),
         "e"         => (3, 4),
         // "não"  => ((), 5)
@@ -172,8 +182,8 @@ fn infix_binding_power(op: &str) -> (u8, u8) {
         // unary "+" "-" => ((), 13)
         "^"         => (16, 15),
         "."         => (18, 17),
-        _ => todo!()
-    }
+        _ => { return None }
+    })
 }
 
 fn prefix_binding_power(op: &str) -> ((), u8) {
