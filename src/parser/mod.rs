@@ -73,7 +73,6 @@ impl Parser {
             Some(tok) => tok,
             None => return Err(ParseError::UnexpectedEOF)
         };
-        println!("{token:?}");
         let mut lhs = match token {
             Token::Identifier(ident) => Expr::Variable(ident.clone()),
             Token::String(str) => Expr::Literal(Value::String(str.clone())),
@@ -105,8 +104,6 @@ impl Parser {
             _ => return Err(ParseError::UnexpectedToken)
         };
 
-        println!("lhs {lhs:?}");
-
         loop {
             let op = match self.peek() {
                 Some(tok) => match tok {
@@ -119,7 +116,6 @@ impl Parser {
                 None => break
             };
 
-            println!("op {op:?}");
 
             if let Some((l_bp, ())) = postfix_binding_power(&op) {
                 if l_bp < min_bp {
