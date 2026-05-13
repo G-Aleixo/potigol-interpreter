@@ -3,7 +3,7 @@ pub mod types;
 pub use types::*;
 use crate::lexer::Token;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ParseError {
     UnexpectedToken,
     UnexpectedEOF,
@@ -201,10 +201,11 @@ mod tests {
     use super::*;
 
     #[test]
-    #[should_panic = "Unexpected EOF"]
     fn incomplete_var_assignment() {
         let mut parser = Parser::new(lexer::tokenize("var abc := ").unwrap());
-        parser.parse().unwrap();
+        let res = parser.parse();
+        assert!(res.is_err());
+        assert_eq!(res.err().unwrap(), ParseError::UnexpectedEOF);
     }
 
     #[test]
