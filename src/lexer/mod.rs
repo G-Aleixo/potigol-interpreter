@@ -17,17 +17,17 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
     while i < chars.len() {
         match chars[i] {
             // the unary - and + will be handled later down
-            '+' => tokens.push(Token::Operation(Operation { operation: String::from("+") })),
-            '-' => tokens.push(Token::Operation(Operation { operation: String::from("-") })),
-            '*' => tokens.push(Token::Operation(Operation { operation: String::from("*") })),
-            '^' => tokens.push(Token::Operation(Operation { operation: String::from("^") })),
-            '/' => tokens.push(Token::Operation(Operation { operation: String::from("/") })),
-            '(' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: String::from("("), is_close: false })),
-            ')' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: String::from(")"), is_close: true })),
-            '[' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: String::from("["), is_close: false })),
-            ']' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: String::from("]"), is_close: true })),
-            '{' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: String::from("{"), is_close: false })),
-            '}' => tokens.push(Token::BlockDelimeter(BlockDelimeter { delimeter: String::from("}"), is_close: true })),
+            '+' => tokens.push(Token::Operation(String::from("+"))),
+            '-' => tokens.push(Token::Operation(String::from("-"))),
+            '*' => tokens.push(Token::Operation(String::from("*"))),
+            '^' => tokens.push(Token::Operation(String::from("^"))),
+            '/' => tokens.push(Token::Operation(String::from("/"))),
+            '(' => tokens.push(Token::BlockDelimeter(String::from("("), false)),
+            ')' => tokens.push(Token::BlockDelimeter(String::from(")"), true)),
+            '[' => tokens.push(Token::BlockDelimeter(String::from("["), false)),
+            ']' => tokens.push(Token::BlockDelimeter(String::from("]"), true)),
+            '{' => tokens.push(Token::BlockDelimeter(String::from("{"), false)),
+            '}' => tokens.push(Token::BlockDelimeter(String::from("}"), true)),
             c if c.is_ascii_digit() => {
                 let mut num = String::new();
                 let mut has_dot = false;
@@ -61,13 +61,13 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
                 }
 
                 if keywords.contains(&ident) {
-                    tokens.push(Token::Keyword(Keyword { keyword: ident }))
+                    tokens.push(Token::Keyword(ident))
                 } else if types.contains(&ident) {
-                    tokens.push(Token::Type(Type { symbol: ident }))  
+                    tokens.push(Token::Type(ident))  
                 } else if operators.contains(&ident) {
-                    tokens.push(Token::Operation(Operation { operation: ident }))  
+                    tokens.push(Token::Operation(ident))  
                 } else {
-                    tokens.push(Token::Identifier(Identifier { symbol: ident }));
+                    tokens.push(Token::Identifier(ident));
                 }
                 continue;
             }
@@ -101,8 +101,8 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
                 let tmp = i + 1;
                 if tmp < chars.len() {
                     match chars[tmp] {
-                        '=' => { tokens.push(Token::Operation(Operation { operation: String::from(":=") })); i += 1 }
-                        ':' => { tokens.push(Token::Operation(Operation { operation: String::from("::") })); i += 1 }
+                        '=' => { tokens.push(Token::Operation(String::from(":="))); i += 1 }
+                        ':' => { tokens.push(Token::Operation(String::from("::"))); i += 1 }
                         _ => { tokens.push(Token::Colon) }
                     }
                 } else {
@@ -113,24 +113,24 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
                 let tmp = i + 1;
                 if tmp < chars.len() {
                     match chars[tmp] {
-                        '=' =>  { tokens.push(Token::Operation(Operation { operation: String::from("==")} )); i += 1 }
-                        '>' =>  { tokens.push(Token::Operation(Operation { operation: String::from("=>")} )); i += 1 }
-                        _ => { tokens.push(Token::Operation(Operation { operation: String::from("=") })) }
+                        '=' =>  { tokens.push(Token::Operation(String::from("=="))); i += 1 }
+                        '>' =>  { tokens.push(Token::Operation(String::from("=>"))); i += 1 }
+                        _ => { tokens.push(Token::Operation(String::from("="))) }
                     }
                 } else {
-                    tokens.push(Token::Operation(Operation { operation: String::from("=") }))
+                    tokens.push(Token::Operation(String::from("=")))
                 }
             }
             '<' => {
                 let tmp = i + 1;
                 if tmp < chars.len() {
                     match chars[tmp] {
-                        '=' =>  { tokens.push(Token::Operation(Operation { operation: String::from("<=")} )); i += 1 }
-                        '>' =>  { tokens.push(Token::Operation(Operation { operation: String::from("<>")} )); i += 1 }
-                        _ =>  { tokens.push(Token::Operation(Operation { operation: String::from("<") })) }
+                        '=' =>  { tokens.push(Token::Operation(String::from("<="))); i += 1 }
+                        '>' =>  { tokens.push(Token::Operation(String::from("<>"))); i += 1 }
+                        _ =>  { tokens.push(Token::Operation(String::from("<"))) }
                     }
                 } else {
-                    tokens.push(Token::Operation(Operation { operation: String::from("<") }))
+                    tokens.push(Token::Operation(String::from("<")))
                 }
             }
             '>' => {

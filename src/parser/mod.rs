@@ -1,9 +1,7 @@
 pub mod types;
 
-use std::clone;
-
 pub use types::*;
-use crate::lexer::{self, Keyword, Token};
+use crate::lexer::Token;
 
 #[derive(Debug)]
 pub enum ParseError {
@@ -41,14 +39,14 @@ impl Parser {
                     Token::Unknown(tok) => panic!("Found unknown token {tok} while parsing"),
                     Token::Keyword(keyword) => {
                         match keyword {
-                            keyword if keyword.keyword == "var" => {
-                                self.expect(Token::Keyword(Keyword { keyword: "var".to_string() }))?;
+                            keyword if keyword == "var" => {
+                                self.expect(Token::Keyword("var".to_string()))?;
 
                                 let token = self.next().unwrap();
                                 if let Token::Identifier(ident) = token {
-                                    let name = ident.symbol.clone();
+                                    let name = ident.clone();
 
-                                    self.expect(Token::Operation(lexer::Operation { operation: ":=".to_string()}))?;
+                                    self.expect(Token::Operation(":=".to_string()))?;
                                     let value = self.parse_expr()?;
                                     if !self.is_eot() { self.expect(Token::NewLine)?; }
 

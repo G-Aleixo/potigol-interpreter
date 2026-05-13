@@ -1,7 +1,7 @@
 #[derive(Debug, PartialEq)]
 pub enum Token {
-    Identifier(Identifier),
-    Type(Type),
+    Identifier(String),
+    Type(String),
     String(String),
     Character(char),
     Integer(i64),
@@ -12,9 +12,9 @@ pub enum Token {
     Period,
     Colon,
     Unknown(char),
-    Keyword(Keyword),
-    Operation(Operation),
-    BlockDelimeter(BlockDelimeter),
+    Keyword(String),
+    Operation(String),
+    BlockDelimeter(String, bool),
 }
 
 #[derive(Debug, PartialEq)]
