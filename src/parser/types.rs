@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub enum Expr {
     Literal(Value),
     Variable(String),
@@ -8,12 +9,14 @@ pub enum Expr {
     Tuple(Vec<Expr>),
 }
 
+#[derive(Debug)]
 pub enum Stmt {
     ConstAssignment(String, Expr),
     VarAssignment(String, Expr),
     ExprStmt(Expr),
 }
 
+#[derive(Debug)]
 pub enum BinOp {
     Plus,
     Minus,
@@ -24,6 +27,7 @@ pub enum BinOp {
     Pow,
 }
 
+#[derive(Debug)]
 pub enum Value {
     Integer(i64),
     Float(f64),

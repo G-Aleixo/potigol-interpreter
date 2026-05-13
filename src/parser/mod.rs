@@ -1,9 +1,12 @@
 pub mod types;
 
-pub use types::*;
-use crate::lexer::{Keyword, Token};
+use std::clone;
 
-enum ParseError {
+pub use types::*;
+use crate::lexer::{self, Keyword, Token};
+
+#[derive(Debug)]
+pub enum ParseError {
     UnexpectedToken,
     UnexpectedEOF,
 }
@@ -35,25 +38,46 @@ impl Parser {
         match self.peek() {
             Some(token) => {
                 match token {
-                    Token::Identifier(identifier) => todo!(),
-                    Token::Type(_) => todo!(),
-                    Token::String(_) => todo!(),
-                    Token::Character(_) => todo!(),
-                    Token::Integer(_) => todo!(),
-                    Token::Float(_) => todo!(),
-                    Token::Boolean(_) => todo!(),
-                    Token::NewLine => todo!(),
-                    Token::Comma => todo!(),
-                    Token::Period => todo!(),
-                    Token::Colon => todo!(),
-                    Token::Unknown(_) => todo!(),
-                    Token::Keyword(keyword) => todo!(),
-                    Token::Operation(operation) => todo!(),
-                    Token::BlockDelimeter(block_delimeter) => todo!(),
+                    Token::Unknown(tok) => panic!("Found unknown token {tok} while parsing"),
+                    Token::Keyword(keyword) => {
+                        match keyword {
+                            keyword if keyword.keyword == "var" => {
+                                self.expect(Token::Keyword(Keyword { keyword: "var".to_string() }))?;
+
+                                let token = self.next().unwrap();
+                                if let Token::Identifier(ident) = token {
+                                    let name = ident.symbol.clone();
+
+                                    self.expect(Token::Operation(lexer::Operation { operation: ":=".to_string()}))?;
+                                    let value = self.parse_expr()?;
+                                    if !self.is_eot() { self.expect(Token::NewLine)?; }
+
+                                    return Ok(Stmt::VarAssignment(name, value))
+                                };
+                                return Err(ParseError::UnexpectedToken)
+                            }
+                            keyword => { panic!("Unknown keyword \"{keyword:?}\" found") }
+                        }
+                    },
+                    _ => self.parse_expr_stmt()
                 }
             }
             None => Err(ParseError::UnexpectedEOF)
         }
+    }
+
+    fn parse_expr_stmt(&mut self) -> Result<Stmt, ParseError> {
+        todo!()
+    }
+
+    fn parse_expr(&mut self) -> Result<Expr, ParseError> {
+        let token = self.next().unwrap();
+    
+        if let Token::Float(token) = token {
+            return Ok(Expr::Literal(Value::Float(*token)));
+        }
+
+        Err(ParseError::UnexpectedToken)
     }
 
     fn next(&mut self) -> Option<&Token> {
@@ -77,6 +101,10 @@ impl Parser {
             }
         }
         Err(ParseError::UnexpectedEOF)
+    }
+
+    fn consume_while<F: Fn(&Token) -> bool>(&mut self, f: F) {
+        while f(self.next().unwrap()) {}
     }
 
     fn is_eot(&self) -> bool {
