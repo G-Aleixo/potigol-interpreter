@@ -28,7 +28,7 @@ impl Compiler {
     }
 
     fn compile_statement(&mut self, statement: &Stmt) {
-
+        todo!()
     }
 
     fn emit(&mut self, bytecode: Bytecode) {
