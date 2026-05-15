@@ -195,11 +195,11 @@ impl Trie {
     }
 
     fn contains_bytes(&self, text: &[u8]) -> bool {
-        if self.is_leaf && text.is_empty() {
+        if text.is_empty() {
             return true
-        } else if self.is_leaf {
+        } else if self.is_leaf && !text.is_empty(){
             return false
-        } else if let Some(child) = self.children.get(&text[0]) {
+        } else if let Some(child) = self.children.get(&text[0]){
             return child.contains_bytes(&text[1..text.len()]);
         };
         

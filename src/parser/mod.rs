@@ -25,7 +25,7 @@ impl Parser {
     pub fn parse(&mut self) -> Result<Vec<Stmt>, ParseError> {
         let mut stmts = vec![];
         
-        while !self.is_eot() {
+        while !self.is_eot() && !self.is_terminal() {
             stmts.push(self.parse_stmt()?);
         }
     
@@ -54,6 +54,9 @@ impl Parser {
                                 };
                                 Err(ParseError::UnexpectedToken)
                             }
+                            keyword if keyword == "se" => {
+                                self.parse_expr_stmt()
+                            }
                             keyword => { panic!("Unknown keyword \"{keyword:?}\" found") }
                         }
                     },
@@ -69,10 +72,18 @@ impl Parser {
     }
 
     fn parse_expr(&mut self, min_bp: u8) -> Result<Expr, ParseError>{
-        let token = match self.next() {
+        let mut token = match self.next() {
             Some(tok) => tok,
             None => return Err(ParseError::UnexpectedEOF)
         };
+
+        while *token == Token::NewLine {
+            token = match self.next() {
+                Some(tok) => tok,
+                None => return Err(ParseError::UnexpectedEOF)
+            };
+        }
+
         let mut lhs = match token {
             Token::Identifier(ident) => Expr::Variable(ident.clone()),
             Token::String(str) => Expr::Literal(Value::String(str.clone())),
@@ -85,6 +96,38 @@ impl Parser {
                 let lhs = self.parse_expr(0)?;
                 self.expect(Token::BlockDelimeter(")".to_string(), true))?;
                 lhs
+            }
+
+            Token::Keyword(keyword) if keyword == "se" => {
+                let cond = self.parse_expr(0)?;
+                self.expect(Token::Keyword("então".to_string()))?;
+                let then_stmts = self.parse_block_until_keyword(&["senãose", "senão", "fim"])?;
+
+                let mut elifs: Vec<(Expr, Vec<Stmt>)> = Vec::new();
+                while self.check_keyword("senãose") {
+                    self.next(); // consume 'elif'
+                    let elif_cond = self.parse_expr(0)?;
+                    self.expect(Token::Keyword("então".to_string()))?;
+                    let elif_then = self.parse_block_until_keyword(&["senãose", "senão", "fim"])?;
+                    elifs.push((elif_cond, elif_then));
+                }
+
+                let mut else_stmts: Vec<Stmt> = if self.check_keyword("senão") {
+                    self.next();
+                    self.parse_block_until_keyword(&["fim"])?
+                } else {
+                    Vec::new()
+                };
+
+                self.expect(Token::Keyword("fim".to_string()))?;
+
+                // desugar elif chain
+                for (elif_cond, elif_then) in elifs.into_iter().rev() {
+                    let nested_if = Expr::Ternary(Box::new(elif_cond), elif_then, else_stmts);
+                    else_stmts = vec![Stmt::ExprStmt(nested_if)];
+                }
+
+                Expr::Ternary(Box::new(cond), then_stmts, else_stmts)
             }
             
             Token::Keyword(keyword) => {
@@ -111,6 +154,7 @@ impl Parser {
                     Token::Keyword(keyword) => keyword.clone(),
                     Token::Operation(op) => op.clone(),
                     Token::BlockDelimeter(block, _) => block.clone(),
+                    Token::NewLine => {self.next(); continue},
                     _ => return Err(ParseError::UnexpectedToken)
                 }
                 None => break
@@ -180,8 +224,38 @@ impl Parser {
         while f(self.next().unwrap()) {}
     }
 
+    fn is_terminal(&self) -> bool {
+        self.is_eot() | match self.peek().unwrap() {
+            Token::Keyword(keyword) => matches!(keyword.as_ref(),
+                "senão" |
+                "senãose" |
+                "fim"
+            ),
+            _ => false
+        }
+    }
+
     fn is_eot(&self) -> bool {
         self.pos >= self.tokens.len()
+    }
+
+    fn parse_block_until_keyword(&mut self, terminators: &[&str]) -> Result<Vec<Stmt>, ParseError> {
+        let mut stmts = Vec::new();
+        while let Some(tok) = self.peek() {
+            // stop if next token is any of the terminators
+            if let Token::Keyword(k) = tok {
+                if terminators.iter().any(|t| t == k) {
+                    break;
+                }
+            }
+            stmts.push(self.parse_stmt()?);
+        }
+        Ok(stmts)
+    }
+
+    // --- new helper: check next token is a specific keyword (by string) ---
+    fn check_keyword(&self, kw: &str) -> bool {
+        matches!(self.peek(), Some(Token::Keyword(k)) if k == kw)
     }
 }
 

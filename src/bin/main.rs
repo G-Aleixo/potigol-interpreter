@@ -11,8 +11,8 @@ fn main() {
 
     println!("{result:#?}");
 
-    let tokens = tokenize("2 * (((2 + 3)))").unwrap();
+    let tokens = tokenize(include_str!("../../test.poti")).unwrap();
 
-    println!("{tokens:?}");
-    println!("{:?}", parser::Parser::new(tokens).parse().unwrap());
+    println!("{tokens:#?}");
+    println!("{:#?}", parser::Parser::new(tokens).parse().unwrap());
 }
