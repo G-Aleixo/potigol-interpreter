@@ -22,11 +22,16 @@ impl<'a> Enviroment<'a> {
         })
     }
 
+    pub fn empty() -> Enviroment<'static> {
+        Enviroment { parent: None, const_vars: HashMap::new(), vars: HashMap::new() }
+    }
+
     pub fn new_child(&self) -> Enviroment {
         Enviroment { parent: Some(self), const_vars: HashMap::new(), vars: HashMap::new() }
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum Value {
     Integer(i64),
     Float(f64),
@@ -48,14 +53,14 @@ impl From<parser::Value> for Value {
     }
 }
 
-impl std::ops::Add<Self> for &Value {
+impl std::ops::Add<Self> for Value {
     type Output = Value;
 
     fn add(self, rhs: Self) -> Self::Output {
         match self {
             Value::Integer(num1) => match rhs {
                 Value::Integer(num2) => Value::Integer(num1 + num2),
-                Value::Float(num2) => Value::Float(*num1 as f64 + num2),
+                Value::Float(num2) => Value::Float(num1 as f64 + num2),
                 Value::String(str) => Value::String(format!("{num1}{str}")),
                 Value::Boolean(_) => panic!("Cannot add integer and boolean"),
                 Value::Lambda(_, _) => panic!("Cannot add integer and lambda expression"),
@@ -63,7 +68,7 @@ impl std::ops::Add<Self> for &Value {
                 Value::Tuple(_) => panic!("Cannot add integer and tuple"),
             },
             Value::Float(num1) => match rhs {
-                Value::Integer(num2) => Value::Integer(*num1 as i64 +  num2),
+                Value::Integer(num2) => Value::Integer(num1 as i64 +  num2),
                 Value::Float(num2) => Value::Float(num1 + num2),
                 Value::String(str) => Value::String(format!("{num1}{str}")),
                 Value::Boolean(_) => panic!("Cannot add float and boolean"),

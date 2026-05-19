@@ -4,17 +4,22 @@ use types::*;
 
 use crate::parser::{BinOp, Expr, Stmt};
 
-struct Interpreter<'a> {
+pub struct Interpreter<'a> {
     envs: Vec<Enviroment<'a>>
 }
 
 
 impl Interpreter<'_> {
+    pub fn new() -> Interpreter<'static> {
+        Interpreter { envs: vec![Enviroment::empty()] }
+    }
     pub fn interpret(&mut self, statements: Vec<Stmt>) {
-
+        for statement in statements {
+            self.interpret_single(&statement);
+        }
     }
 
-    pub fn interpret_single(&mut self, statement: &Stmt) {
+    pub fn interpret_single(&mut self, statement: &Stmt) -> Value{
         match statement {
             Stmt::ConstAssignment(varname, expr) => self.evaluate_const_assignment(varname, expr),
             Stmt::VarAssignment(varname, expr) => self.evaluate_var_assignment(varname, expr),
@@ -22,20 +27,20 @@ impl Interpreter<'_> {
         }
     }
 
-    fn evaluate_const_assignment(&mut self, varname: &String, expr: &Expr) {
+    fn evaluate_const_assignment(&mut self, varname: &String, expr: &Expr) -> Value {
         todo!("Const assignment not implemented");
     }
-    fn evaluate_var_assignment(&mut self, varname: &String, expr: &Expr) {
+    fn evaluate_var_assignment(&mut self, varname: &String, expr: &Expr) -> Value{
         todo!("Var assignment not implemented");
     }
-    fn evaluate_expr_stmt(&mut self, expr: &Expr) {
-        let _ = self.evaluate_expression(expr);
+    fn evaluate_expr_stmt(&mut self, expr: &Expr) -> Value {
+        self.evaluate_expression(expr)
     }
 
     fn evaluate_expression(&self, expr: &Expr) -> Value {
         match expr {
-            Expr::Literal(value) => todo!(),
-            Expr::Variable(varname) => self.get_var(varname).expect(&format!("Variable {varname} not defined")),
+            Expr::Literal(value) => value.clone().into(),
+            Expr::Variable(varname) => self.get_var(varname).expect(&format!("Variable {varname} not defined")).clone(),
             Expr::Binary(expr1, bin_op, expr2) => self.evaluate_bin_op(expr1, bin_op, expr2),
             Expr::Unary(unary_op, expr) => todo!(),
             Expr::Ternary(expr, stmts, stmts1) => todo!(),
@@ -46,7 +51,7 @@ impl Interpreter<'_> {
         }
     }
 
-    fn evaluate_bin_op(&mut self, expr1: &Expr, op: BinOp, expr2: &Expr) -> Value {
+    fn evaluate_bin_op(&self, expr1: &Expr, op: &BinOp, expr2: &Expr) -> Value {
         match op {
             BinOp::Plus => self.evaluate_expression(expr1) + self.evaluate_expression(expr2),
             BinOp::Minus => todo!(),

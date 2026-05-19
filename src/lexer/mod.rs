@@ -43,10 +43,10 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
                     num.push(chars[i]);
                     i += 1;
                 }
-                if let Ok(float) = num.parse() {
-                    tokens.push(Token::Float(float));
-                } else if let Ok(int) = num.parse() {
+                if let Ok(int) = num.parse() {
                     tokens.push(Token::Integer(int));
+                }else if let Ok(float) = num.parse() {
+                    tokens.push(Token::Float(float));
                 } else {
                     return Err("Could not parse num as any number type");
                 }

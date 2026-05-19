@@ -1,18 +1,12 @@
-use potigol_interpreter::{lexer::tokenize, parser};
-
+use potigol_interpreter::{interpreter::walker::Interpreter, lexer::tokenize, parser};
 
 fn main() {
-    let res = tokenize("1.5").unwrap();
-    println!("{res:#?}");
-
-    let mut parser = parser::Parser::new(res);
-
-    let result = parser.parse().unwrap();
-
-    println!("{result:#?}");
-
     let tokens = tokenize(include_str!("../../test.poti")).unwrap();
 
     println!("{tokens:#?}");
-    println!("{:#?}", parser::Parser::new(tokens).parse().unwrap());
+    println!("{:#?}", parser::Parser::new(tokens.clone()).parse().unwrap());
+
+    let mut interp = Interpreter::new();
+
+    println!("{:?}", interp.interpret_single(&parser::Parser::new(tokens).parse().unwrap()[0]))
 }

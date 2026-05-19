@@ -1,9 +1,1 @@
-se 
-2 > 2
-então
-imprima
-senãose 5 < 2
-então imprima
-senão
-imprima
-fim
+0.1 + 0.2 + 0.3
