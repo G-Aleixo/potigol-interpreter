@@ -57,7 +57,7 @@ impl std::ops::Add<Self> for Value {
     type Output = Value;
 
     fn add(self, rhs: Self) -> Self::Output {
-        match (self, rhs) {
+        match (self.clone(), rhs.clone()) {
             (Value::Integer(num1), Value::Integer(num2)) => Value::Integer(num1 + num2),
             (Value::Integer(num1), Value::Float(num2)) => Value::Float(num1 as f64 + num2),
             (Value::Integer(num1), Value::String(str)) => todo!(),
@@ -79,39 +79,6 @@ impl std::ops::Add<Self> for Value {
             (Value::Boolean(_), Value::List(values)) => todo!(),
             (Value::Boolean(_), Value::Tuple(values)) => todo!(),
             _ => todo!()
-        };
-        match self {
-            Value::Integer(num1) => match rhs {
-                Value::Integer(num2) => Value::Integer(num1 + num2),
-                Value::Float(num2) => Value::Float(num1 as f64 + num2),
-                Value::String(str) => Value::String(format!("{num1}{str}")),
-                Value::Boolean(_) => panic!("Cannot add integer and boolean"),
-                Value::Lambda(_, _) => panic!("Cannot add integer and lambda expression"),
-                Value::List(_) => panic!("Cannot add integer and list"),
-                Value::Tuple(_) => panic!("Cannot add integer and tuple"),
-            },
-            Value::Float(num1) => match rhs {
-                Value::Integer(num2) => Value::Integer(num1 as i64 +  num2),
-                Value::Float(num2) => Value::Float(num1 + num2),
-                Value::String(str) => Value::String(format!("{num1}{str}")),
-                Value::Boolean(_) => panic!("Cannot add float and boolean"),
-                Value::Lambda(_, _) => panic!("Cannot add float and lambda expression"),
-                Value::List(_) => panic!("Cannot add float and list"),
-                Value::Tuple(_) => panic!("Cannot add float and tuple"),
-            },
-            Value::String(str1) => match rhs {
-                Value::Integer(num) => Value::String(format!("{str1}{num}")),
-                Value::Float(num) => Value::String(format!("{str1}{num}")),
-                Value::String(str2) => Value::String(format!("{str1}{str2}")),
-                Value::Boolean(bool) => Value::String(format!("{str1}{bool}")),
-                Value::Lambda(_, _) => panic!("Cannot concatenate string and lambda expression"),
-                Value::List(_) => panic!("Cannot concatenate string and list"),
-                Value::Tuple(_) => panic!("Cannot concatenate string and tuple"),
-            },
-            Value::Boolean(_) => panic!("Cannot add boolean"),
-            Value::Lambda(items, expr) => todo!(),
-            Value::List(values) => todo!(),
-            Value::Tuple(values) => todo!(),
         }
     }
 }
