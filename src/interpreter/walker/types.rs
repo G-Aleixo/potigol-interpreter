@@ -76,3 +76,57 @@ impl std::ops::Add<Self> for Value {
         }
     }
 }
+
+impl std::ops::Sub<Self> for Value {
+    type Output = Value;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        match (self.clone(), rhs.clone()) {
+            (Value::Integer(num1), Value::Integer(num2)) => Value::Integer(num1 - num2),
+            (Value::Integer(num1), Value::Float(num2)) => Value::Float(num1 as f64 - num2),
+            (Value::Integer(num1), Value::String(str)) => Value::String(format!("{num1}{str}")),
+            (Value::Integer(_), _) => panic!("Cannot sub integer {self:?} with {rhs:?}"),
+            (Value::Float(num1), Value::Integer(num2)) => Value::Float(num1 - num2 as f64),
+            (Value::Float(num1), Value::Float(num2)) => Value::Float(num1 - num2),
+            (Value::Float(num1), Value::String(str)) => Value::String(format!("{num1}{str}")),
+            (Value::Float(_), _) => panic!("Cannot sub float {self:?} with {rhs:?}"),
+            (Value::String(str), Value::String(str2)) => Value::String(str.chars().filter(|c| !str2.contains(*c)).collect()),
+            (Value::String(_), _) => panic!("Cannot sub string {self:?} with {rhs:?}"),
+            _ => panic!("Cannot sub {self:?} with {rhs:?}")
+        }
+    }
+}
+
+impl std::ops::Mul<Self> for Value {
+    type Output = Value;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        match (self.clone(), rhs.clone()) {
+            (Value::Integer(num1), Value::Integer(num2)) => Value::Integer(num1 * num2),
+            (Value::Integer(num1), Value::Float(num2)) => Value::Float(num1 as f64 * num2),
+            (Value::Integer(_), _) => panic!("Cannot mul integer {self:?} with {rhs:?}"),
+            (Value::Float(num1), Value::Integer(num2)) => Value::Float(num1 * num2 as f64),
+            (Value::Float(num1), Value::Float(num2)) => Value::Float(num1 * num2),
+            (Value::Float(_), _) => panic!("Cannot mul float {self:?} with {rhs:?}"),
+            (Value::String(str), Value::Integer(num)) => Value::String(str.repeat(num as usize)),
+            (Value::String(_), _) => panic!("Cannot mul string {self:?} with {rhs:?}"),
+            _ => panic!("Cannot sum {self:?} with {rhs:?}")
+        }
+    }
+}
+
+impl std::ops::Div<Self> for Value {
+    type Output = Value;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        match (self.clone(), rhs.clone()) {
+            (Value::Integer(num1), Value::Integer(num2)) => Value::Float(num1 as f64 / num2 as f64),
+            (Value::Integer(num1), Value::Float(num2)) => Value::Float(num1 as f64 / num2),
+            (Value::Integer(_), _) => panic!("Cannot div integer {self:?} with {rhs:?}"),
+            (Value::Float(num1), Value::Integer(num2)) => Value::Float(num1 / num2 as f64),
+            (Value::Float(num1), Value::Float(num2)) => Value::Float(num1 / num2),
+            (Value::Float(_), _) => panic!("Cannot div float {self:?} with {rhs:?}"),
+            _ => panic!("Cannot div {self:?} with {rhs:?}")
+        }
+    }
+}

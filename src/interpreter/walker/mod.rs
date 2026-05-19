@@ -54,9 +54,9 @@ impl Interpreter<'_> {
     fn evaluate_bin_op(&self, expr1: &Expr, op: &BinOp, expr2: &Expr) -> Value {
         match op {
             BinOp::Plus => self.evaluate_expression(expr1) + self.evaluate_expression(expr2),
-            BinOp::Minus => todo!(),
-            BinOp::Mult => todo!(),
-            BinOp::Div => todo!(),
+            BinOp::Minus => self.evaluate_expression(expr1) - self.evaluate_expression(expr2),
+            BinOp::Mult => self.evaluate_expression(expr1) * self.evaluate_expression(expr2),
+            BinOp::Div => self.evaluate_expression(expr1) / self.evaluate_expression(expr2),
             BinOp::IntDiv => todo!(),
             BinOp::Mod => todo!(),
             BinOp::Pow => todo!(),
