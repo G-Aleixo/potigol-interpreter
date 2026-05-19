@@ -60,25 +60,19 @@ impl std::ops::Add<Self> for Value {
         match (self.clone(), rhs.clone()) {
             (Value::Integer(num1), Value::Integer(num2)) => Value::Integer(num1 + num2),
             (Value::Integer(num1), Value::Float(num2)) => Value::Float(num1 as f64 + num2),
-            (Value::Integer(num1), Value::String(str)) => todo!(),
-            (Value::Integer(_), _) => panic!("Cannot sum {self:?} with {rhs:?}"),
+            (Value::Integer(num1), Value::String(str)) => Value::String(format!("{num1}{str}")),
+            (Value::Integer(_), _) => panic!("Cannot sum integer {self:?} with {rhs:?}"),
             (Value::Float(num1), Value::Integer(num2)) => Value::Float(num1 + num2 as f64),
             (Value::Float(num1), Value::Float(num2)) => Value::Float(num1 + num2),
-            (Value::Float(num1), Value::String(str)) => todo!(),
-            (Value::Float(_), _) => panic!("Cannot sum {self:?} with {rhs:?}"),
-            (Value::String(_), Value::Integer(_)) => todo!(),
-            (Value::String(_), Value::Float(_)) => todo!(),
-            (Value::String(_), Value::String(_)) => todo!(),
-            (Value::String(_), Value::Boolean(_)) => todo!(),
-            (Value::String(_), _) => panic!("Cannot sum {self:?} with {rhs:?}"),
-            (Value::Boolean(_), Value::Integer(_)) => todo!(),
-            (Value::Boolean(_), Value::Float(_)) => todo!(),
-            (Value::Boolean(_), Value::String(_)) => todo!(),
-            (Value::Boolean(_), Value::Boolean(_)) => todo!(),
-            (Value::Boolean(_), Value::Lambda(items, expr)) => todo!(),
-            (Value::Boolean(_), Value::List(values)) => todo!(),
-            (Value::Boolean(_), Value::Tuple(values)) => todo!(),
-            _ => todo!()
+            (Value::Float(num1), Value::String(str)) => Value::String(format!("{num1}{str}")),
+            (Value::Float(_), _) => panic!("Cannot sum float {self:?} with {rhs:?}"),
+            (Value::String(str), Value::Integer(num)) => Value::String(format!("{str}{num}")),
+            (Value::String(str), Value::Float(num)) => Value::String(format!("{str}{num}")),
+            (Value::String(str), Value::String(str2)) => Value::String(format!("{str}{str2}")),
+            (Value::String(str), Value::Boolean(bool)) => Value::String(format!("{str}{bool}")),
+            (Value::String(_), _) => panic!("Cannot sum string {self:?} with {rhs:?}"),
+            (Value::Boolean(_), _) => panic!("Cannot sum boolean {self:?} with {rhs:?}"),
+            _ => panic!("Cannot sum {self:?} with {rhs:?}")
         }
     }
 }
