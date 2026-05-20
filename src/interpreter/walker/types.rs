@@ -35,7 +35,7 @@ impl Enviroment {
             self.vars.insert(varname.to_string(), value);
             Ok(())
         } else if let Some(parent) = &self.parent {
-            parent.borrow_mut().assign_var(varname, value);
+            parent.borrow_mut().assign_var(varname, value)?;
             Ok(())
         } else {
             Err(format!("Undeclared variable {}", varname))

@@ -27,7 +27,7 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_const_assignment(&mut self, varname: &String, expr: &Expr) -> Value {
+    fn evaluate_const_assignment(&mut self, _varname: &String, _expr: &Expr) -> Value {
         todo!("Const assignment not implemented");
     }
     
