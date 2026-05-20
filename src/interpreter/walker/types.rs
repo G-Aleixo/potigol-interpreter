@@ -42,6 +42,26 @@ pub enum Value {
     Tuple(Vec<Value>),
 }
 
+impl Value {
+    pub fn int_div(&self, other: &Value) -> Value {
+        match (self, other) {
+            (Value::Integer(num1), Value::Integer(num2)) => Value::Integer(num1 / num2),
+            _ => panic!("Cannot int div {self:?} with {other:?}")
+        }
+    }
+    pub fn pow(&self, other: &Value) -> Value {
+        match (self, other) {
+            (Value::Integer(num1), Value::Integer(num2)) => Value::Float((*num1 as f64).powi(*num2 as i32)),
+            (Value::Integer(num1), Value::Float(num2)) => Value::Float((*num1 as f64).powf(*num2)),
+            (Value::Integer(_), _) => panic!("Cannot pow integer {self:?} with {other:?}"),
+            (Value::Float(num1), Value::Integer(num2)) => Value::Float(num1.powf(*num2 as f64)),
+            (Value::Float(num1), Value::Float(num2)) => Value::Float(num1.powf(*num2)),
+            (Value::Float(_), _) => panic!("Cannot pow float {self:?} with {other:?}"),
+            _ => panic!("Cannot pow {self:?} with {other:?}")
+        }
+    }
+}
+
 impl From<parser::Value> for Value {
     fn from(value: parser::Value) -> Self {
         match value {
@@ -127,6 +147,22 @@ impl std::ops::Div<Self> for Value {
             (Value::Float(num1), Value::Float(num2)) => Value::Float(num1 / num2),
             (Value::Float(_), _) => panic!("Cannot div float {self:?} with {rhs:?}"),
             _ => panic!("Cannot div {self:?} with {rhs:?}")
+        }
+    }
+}
+
+impl std::ops::Rem<Self> for Value {
+    type Output = Value;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        match (self.clone(), rhs.clone()) {
+            (Value::Integer(num1), Value::Integer(num2)) => Value::Integer(num1 % num2),
+            (Value::Integer(num1), Value::Float(num2)) => Value::Float(num1 as f64 % num2),
+            (Value::Integer(_), _) => panic!("Cannot mod integer {self:?} with {rhs:?}"),
+            (Value::Float(num1), Value::Integer(num2)) => Value::Float(num1 % num2 as f64),
+            (Value::Float(num1), Value::Float(num2)) => Value::Float(num1 % num2),
+            (Value::Float(_), _) => panic!("Cannot mod float {self:?} with {rhs:?}"),
+            _ => panic!("Cannot mod {self:?} with {rhs:?}")
         }
     }
 }
