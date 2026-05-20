@@ -166,3 +166,95 @@ impl std::ops::Rem<Self> for Value {
         }
     }
 }
+
+impl std::ops::BitAnd<Self> for Value {
+    type Output = Value;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        match (self.clone(), rhs.clone()) {
+            (Value::Boolean(bool1), Value::Boolean(bool2)) => Value::Boolean(bool1 && bool2),
+            _ => panic!("Cannot and {self:?} with {rhs:?}")
+        }
+    }
+}
+
+impl std::ops::BitOr<Self> for Value {
+    type Output = Value;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        match (self.clone(), rhs.clone()) {
+            (Value::Boolean(bool1), Value::Boolean(bool2)) => Value::Boolean(bool1 || bool2),
+            _ => panic!("Cannot or {self:?} with {rhs:?}")
+        }
+    }
+}
+
+impl PartialEq<Self> for Value {
+    fn eq(&self, rhs: &Self) -> bool {
+        //TODO: implement actual equality later
+        format!("{self:?}") == format!("{rhs:?}")
+    }
+}
+
+impl PartialOrd<Self> for Value {
+    fn ge(&self, rhs: &Self) -> bool {
+        match (self.clone(), rhs.clone()) {
+            (Value::Integer(num1), Value::Integer(num2)) => num1 >= num2,
+            (Value::Integer(num1), Value::Float(num2)) => num1 as f64 >= num2,
+            (Value::Integer(_), Value::String(_)) => todo!(),
+            (Value::Float(num1), Value::Integer(num2)) => num1 >= num2 as f64,
+            (Value::Float(num1), Value::Float(num2)) => num1 >= num2,
+            (Value::String(_), Value::String(_)) => todo!(),
+            _ => panic!("Cannot compare {self:?} with {rhs:?}")
+        }
+    }
+
+    fn le(&self, rhs: &Self) -> bool {
+        match (self.clone(), rhs.clone()) {
+            (Value::Integer(num1), Value::Integer(num2)) => num1 <= num2,
+            (Value::Integer(num1), Value::Float(num2)) => num1 as f64 <= num2,
+            (Value::Integer(_), Value::String(_)) => todo!(),
+            (Value::Float(num1), Value::Integer(num2)) => num1 <= num2 as f64,
+            (Value::Float(num1), Value::Float(num2)) => num1 <= num2,
+            (Value::String(_), Value::String(_)) => todo!(),
+            _ => panic!("Cannot compare {self:?} with {rhs:?}")
+        }
+    }
+
+    fn gt(&self, rhs: &Self) -> bool {
+        match (self.clone(), rhs.clone()) {
+            (Value::Integer(num1), Value::Integer(num2)) => num1 > num2,
+            (Value::Integer(num1), Value::Float(num2)) => num1 as f64 > num2,
+            (Value::Integer(_), Value::String(_)) => todo!(),
+            (Value::Float(num1), Value::Integer(num2)) => num1 > num2 as f64,
+            (Value::Float(num1), Value::Float(num2)) => num1 > num2,
+            (Value::String(_), Value::String(_)) => todo!(),
+            _ => panic!("Cannot compare {self:?} with {rhs:?}")
+        }
+    }
+
+
+    fn lt(&self, rhs: &Self) -> bool {
+        match (self.clone(), rhs.clone()) {
+            (Value::Integer(num1), Value::Integer(num2)) => num1 < num2,
+            (Value::Integer(num1), Value::Float(num2)) => (num1 as f64) < num2,
+            (Value::Integer(_), Value::String(_)) => todo!(),
+            (Value::Float(num1), Value::Integer(num2)) => num1 < num2 as f64,
+            (Value::Float(num1), Value::Float(num2)) => num1 < num2,
+            (Value::String(_), Value::String(_)) => todo!(),
+            _ => panic!("Cannot compare {self:?} with {rhs:?}")
+        }
+    }
+
+    fn partial_cmp(&self, rhs: &Self) -> Option<std::cmp::Ordering> {
+        if self.lt(rhs) {
+            return Some(std::cmp::Ordering::Less)
+        } else if self.gt(rhs) {
+            return Some(std::cmp::Ordering::Greater)
+        } else if self.eq(rhs) {
+            return Some(std::cmp::Ordering::Equal)
+        }
+
+        None
+    }
+}
