@@ -3,9 +3,9 @@ pub mod types;
 pub use types::*;
 use crate::lexer::Token;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub enum ParseError {
-    UnexpectedToken,
+    UnexpectedToken(Token),
     UnexpectedEOF,
 }
 
@@ -48,11 +48,16 @@ impl Parser {
 
                                     self.expect(Token::Operation(":=".to_string()))?;
                                     let value = self.parse_expr(0)?;
-                                    if !self.is_eot() { self.expect(Token::NewLine)?; }
+                                    // if !self.is_eot() {
+                                    //     //TODO: really fix this, check for the end of expression correctly
+                                    //     if let Err(_) = self.expect(Token::NewLine) {
+                                    //         self.expect(Token::Keyword("var".to_string())).unwrap();
+                                    //     }
+                                    // }
 
                                     return Ok(Stmt::VarAssignment(name, value))
                                 };
-                                Err(ParseError::UnexpectedToken)
+                                Err(ParseError::UnexpectedToken(self.peek().or(Some(&Token::Unknown('~'))).unwrap().clone()))
                             }
                             keyword if keyword == "se" => {
                                 self.parse_expr_stmt()
@@ -144,7 +149,7 @@ impl Parser {
 
                 Expr::Unary((&op).into(), Box::new(rhs))
             },
-            _ => return Err(ParseError::UnexpectedToken)
+            tok => return Err(ParseError::UnexpectedToken(tok.clone()))
         };
 
         loop {
@@ -155,7 +160,7 @@ impl Parser {
                     Token::Operation(op) => op.clone(),
                     Token::BlockDelimeter(block, _) => block.clone(),
                     Token::NewLine => {self.next(); continue},
-                    _ => return Err(ParseError::UnexpectedToken)
+                    tok => return Err(ParseError::UnexpectedToken(tok.clone()))
                 }
                 None => break
             };
@@ -212,7 +217,7 @@ impl Parser {
     fn expect(&mut self, token: Token) -> Result<&Token, ParseError>{
         if let Some(next_token) = self.next() {
             if token != *next_token {
-                return Err(ParseError::UnexpectedToken);
+                return Err(ParseError::UnexpectedToken(next_token.clone()));
             } else {
                 return Ok(next_token);
             }

@@ -8,5 +8,7 @@ fn main() {
 
     let mut interp = Interpreter::new();
 
-    println!("{:?}", interp.interpret_single(&parser::Parser::new(tokens).parse().unwrap()[0]))
+    interp.interpret(parser::Parser::new(tokens).parse().unwrap());
+
+    println!("Value of x is {:?}", interp.get_var(&"x".to_string()));
 }

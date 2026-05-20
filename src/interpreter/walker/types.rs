@@ -1,33 +1,53 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::parser::{self, Expr};
 
-pub struct Enviroment<'a> {
-    parent: Option<&'a Enviroment<'a>>,
+#[derive(Clone)]
+pub struct Enviroment {
+    parent: Option<Rc<RefCell<Enviroment>>>,
     const_vars: HashMap<String, Value>,
     vars: HashMap<String, Value>
 }
 
-impl<'a> Enviroment<'a> {
-    pub fn resolve(&self, varname: &String) -> Option<&Value> {
-        if let Some(value) = self.const_vars.get(varname).or(match &self.parent {
-            Some(parent) => parent.resolve(varname),
-            None => None
-        }) {
-            return Some(value);
+impl Enviroment {
+    pub fn resolve(&self, varname: &String) -> Option<Value> {
+        // Check constants
+        if let Some(value) = self.const_vars.get(varname) {
+            return Some(value.clone());
         }
-        self.vars.get(varname).or(match &self.parent {
-            Some(parent) => parent.resolve(varname),
-            None => None
-        })
+        // Check mutable vars
+        if let Some(value) = self.vars.get(varname) {
+            return Some(value.clone());
+        }
+        // Check parent recursively
+        if let Some(parent) = &self.parent {
+            return parent.borrow().resolve(varname);
+        }
+        None
     }
 
-    pub fn empty() -> Enviroment<'static> {
+    pub fn set_var(&mut self, varname: &String, value: Value) {
+        self.vars.insert(varname.to_string(), value);
+    }
+    
+    pub fn assign_var(&mut self, varname: &String, value: Value) -> Result<(), String>{
+        if self.vars.contains_key(varname) {
+            self.vars.insert(varname.to_string(), value);
+            Ok(())
+        } else if let Some(parent) = &self.parent {
+            parent.borrow_mut().assign_var(varname, value);
+            Ok(())
+        } else {
+            Err(format!("Undeclared variable {}", varname))
+        }
+    }
+
+    pub fn empty() -> Enviroment {
         Enviroment { parent: None, const_vars: HashMap::new(), vars: HashMap::new() }
     }
 
-    pub fn new_child(&self) -> Enviroment<'_> {
-        Enviroment { parent: Some(self), const_vars: HashMap::new(), vars: HashMap::new() }
+    pub fn new_child(&self) -> Enviroment {
+        Enviroment { parent: Some(Rc::new(RefCell::new(self.clone()))), const_vars: HashMap::new(), vars: HashMap::new() }
     }
 }
 

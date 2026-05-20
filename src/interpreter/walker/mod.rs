@@ -4,13 +4,13 @@ use types::*;
 
 use crate::parser::{BinOp, Expr, Stmt, UnaryOp};
 
-pub struct Interpreter<'a> {
-    envs: Vec<Enviroment<'a>>
+pub struct Interpreter {
+    envs: Vec<Enviroment>
 }
 
 
-impl Interpreter<'_> {
-    pub fn new() -> Interpreter<'static> {
+impl Interpreter {
+    pub fn new() -> Interpreter {
         Interpreter { envs: vec![Enviroment::empty()] }
     }
     pub fn interpret(&mut self, statements: Vec<Stmt>) {
@@ -30,9 +30,13 @@ impl Interpreter<'_> {
     fn evaluate_const_assignment(&mut self, varname: &String, expr: &Expr) -> Value {
         todo!("Const assignment not implemented");
     }
+    
     fn evaluate_var_assignment(&mut self, varname: &String, expr: &Expr) -> Value {
-        todo!("Var assignment not implemented");
+        let value = self.evaluate_expression(expr);
+        self.set_var(varname, value.clone());
+        value
     }
+
     fn evaluate_expr_stmt(&mut self, expr: &Expr) -> Value {
         self.evaluate_expression(expr)
     }
@@ -93,7 +97,15 @@ impl Interpreter<'_> {
         }
     }
 
-    fn get_var(&self, varname: &String) -> Option<&Value> {
+    pub fn get_var(&self, varname: &String) -> Option<Value> {
         self.envs.last().unwrap().resolve(varname)
+    }
+
+    fn set_var(&mut self, varname: &String, value: Value) {
+        if self.get_var(varname).is_some() {
+            self.envs.last_mut().unwrap().assign_var(varname, value).unwrap();
+        } else {
+            self.envs.last_mut().unwrap().set_var(varname, value);
+        }
     }
 }

@@ -154,6 +154,7 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
                 tokens.push(Token::Period);
             }
             ' ' => {}
+            '\r' => {}
             c => {
                 tokens.push(Token::Unknown(c));
             }
