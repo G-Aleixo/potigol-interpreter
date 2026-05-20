@@ -30,13 +30,14 @@ impl Interpreter<'_> {
     fn evaluate_const_assignment(&mut self, varname: &String, expr: &Expr) -> Value {
         todo!("Const assignment not implemented");
     }
-    fn evaluate_var_assignment(&mut self, varname: &String, expr: &Expr) -> Value{
+    fn evaluate_var_assignment(&mut self, varname: &String, expr: &Expr) -> Value {
         todo!("Var assignment not implemented");
     }
     fn evaluate_expr_stmt(&mut self, expr: &Expr) -> Value {
         self.evaluate_expression(expr)
     }
 
+    #[allow(unused_variables)]
     fn evaluate_expression(&self, expr: &Expr) -> Value {
         match expr {
             Expr::Literal(value) => value.clone().into(),

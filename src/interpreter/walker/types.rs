@@ -26,7 +26,7 @@ impl<'a> Enviroment<'a> {
         Enviroment { parent: None, const_vars: HashMap::new(), vars: HashMap::new() }
     }
 
-    pub fn new_child(&self) -> Enviroment {
+    pub fn new_child(&self) -> Enviroment<'_> {
         Enviroment { parent: Some(self), const_vars: HashMap::new(), vars: HashMap::new() }
     }
 }

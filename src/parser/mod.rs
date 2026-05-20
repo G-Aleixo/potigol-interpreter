@@ -220,9 +220,9 @@ impl Parser {
         Err(ParseError::UnexpectedEOF)
     }
 
-    fn consume_while<F: Fn(&Token) -> bool>(&mut self, f: F) {
-        while f(self.next().unwrap()) {}
-    }
+    // fn consume_while<F: Fn(&Token) -> bool>(&mut self, f: F) {
+    //     while f(self.next().unwrap()) {}
+    // }
 
     fn is_terminal(&self) -> bool {
         self.is_eot() | match self.peek().unwrap() {
