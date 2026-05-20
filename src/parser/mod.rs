@@ -57,7 +57,7 @@ impl Parser {
 
                                     return Ok(Stmt::VarAssignment(name, value))
                                 };
-                                Err(ParseError::UnexpectedToken(self.peek().or(Some(&Token::Unknown('~'))).unwrap().clone()))
+                                Err(ParseError::UnexpectedToken(self.peek().unwrap_or(&Token::Unknown('~')).clone()))
                             }
                             keyword if keyword == "se" => {
                                 self.parse_expr_stmt()
@@ -152,17 +152,14 @@ impl Parser {
             tok => return Err(ParseError::UnexpectedToken(tok.clone()))
         };
 
-        loop {
-            let op = match self.peek() {
-                Some(tok) => match tok {
-                    Token::Period => ".".to_string(),
-                    Token::Keyword(keyword) => keyword.clone(),
-                    Token::Operation(op) => op.clone(),
-                    Token::BlockDelimeter(block, _) => block.clone(),
-                    Token::NewLine => {self.next(); continue},
-                    tok => return Err(ParseError::UnexpectedToken(tok.clone()))
-                }
-                None => break
+        while let Some(tok) = self.peek() {
+            let op = match tok {
+                Token::Period => ".".to_string(),
+                Token::Keyword(keyword) => keyword.clone(),
+                Token::Operation(op) => op.clone(),
+                Token::BlockDelimeter(block, _) => block.clone(),
+                Token::NewLine => {self.next(); continue},
+                tok => return Err(ParseError::UnexpectedToken(tok.clone()))
             };
 
 
@@ -248,10 +245,9 @@ impl Parser {
         let mut stmts = Vec::new();
         while let Some(tok) = self.peek() {
             // stop if next token is any of the terminators
-            if let Token::Keyword(k) = tok {
-                if terminators.iter().any(|t| t == k) {
+            if let Token::Keyword(k) = tok &&
+                terminators.iter().any(|t| t == k) {
                     break;
-                }
             }
             stmts.push(self.parse_stmt()?);
         }

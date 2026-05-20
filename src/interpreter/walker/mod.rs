@@ -9,6 +9,12 @@ pub struct Interpreter {
 }
 
 
+impl Default for Interpreter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Interpreter {
     pub fn new() -> Interpreter {
         Interpreter { envs: vec![Enviroment::empty()] }
@@ -23,7 +29,7 @@ impl Interpreter {
         match statement {
             Stmt::ConstAssignment(varname, expr) => self.evaluate_const_assignment(varname, expr),
             Stmt::VarAssignment(varname, expr) => self.evaluate_var_assignment(varname, expr),
-            Stmt::ExprStmt(expr) => self.evaluate_expr_stmt(&expr),
+            Stmt::ExprStmt(expr) => self.evaluate_expr_stmt(expr),
         }
     }
 
@@ -45,7 +51,7 @@ impl Interpreter {
     fn evaluate_expression(&self, expr: &Expr) -> Value {
         match expr {
             Expr::Literal(value) => value.clone().into(),
-            Expr::Variable(varname) => self.get_var(varname).expect(&format!("Variable {varname} not defined")).clone(),
+            Expr::Variable(varname) => self.get_var(varname).unwrap_or_else(|| panic!("Variable {varname} not defined")).clone(),
             Expr::Binary(expr1, bin_op, expr2) => self.evaluate_bin_op(expr1, bin_op, expr2),
             Expr::Unary(unary_op, expr) => self.evaluate_unary_op(expr, unary_op),
             Expr::Ternary(expr, stmts, stmts1) => {
