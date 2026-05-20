@@ -189,6 +189,29 @@ impl std::ops::BitOr<Self> for Value {
     }
 }
 
+impl std::ops::Neg for Value {
+    type Output = Value;
+
+    fn neg(self) -> Self::Output {
+        match self {
+            Value::Integer(num) => Value::Integer(-num),
+            Value::Float(num) => Value::Float(-num),
+            _ => panic!("Cannot negate {self:?}")
+        }
+    }
+}
+
+impl std::ops::Not for Value {
+    type Output = Value;
+
+    fn not(self) -> Self::Output {
+        match self {
+            Value::Boolean(bool) => Value::Boolean(!bool),
+            _ => panic!("Cannot invert {self:?}")
+        }
+    }
+}
+
 impl PartialEq<Self> for Value {
     fn eq(&self, rhs: &Self) -> bool {
         //TODO: implement actual equality later

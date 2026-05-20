@@ -2,7 +2,7 @@ pub mod types;
 
 use types::*;
 
-use crate::parser::{BinOp, Expr, Stmt};
+use crate::parser::{BinOp, Expr, Stmt, UnaryOp};
 
 pub struct Interpreter<'a> {
     envs: Vec<Enviroment<'a>>
@@ -42,12 +42,23 @@ impl Interpreter<'_> {
             Expr::Literal(value) => value.clone().into(),
             Expr::Variable(varname) => self.get_var(varname).expect(&format!("Variable {varname} not defined")).clone(),
             Expr::Binary(expr1, bin_op, expr2) => self.evaluate_bin_op(expr1, bin_op, expr2),
-            Expr::Unary(unary_op, expr) => todo!(),
-            Expr::Ternary(expr, stmts, stmts1) => todo!(),
-            Expr::Call(_, exprs) => todo!(),
-            Expr::Lambda(items, expr) => todo!(),
-            Expr::List(exprs) => todo!(),
-            Expr::Tuple(exprs) => todo!(),
+            Expr::Unary(unary_op, expr) => self.evaluate_unary_op(expr, unary_op),
+            Expr::Ternary(expr, stmts, stmts1) => {
+                // check the expression and run corresponding body
+                // return the value of the final statement
+                todo!()
+            },
+            Expr::Call(func_name, exprs) => {
+                // get the function statement body
+                // create a new enviroment and append it to the env stack
+                // run the function body
+                // return the value
+                todo!()
+            },
+            // copy over to the Value format
+            Expr::Lambda(items, expr) => Value::Lambda(items.to_vec(), expr.clone()),
+            Expr::List(exprs) => Value::List(exprs.iter().map(|expr| self.evaluate_expression(expr)).collect()),
+            Expr::Tuple(exprs) => Value::Tuple(exprs.iter().map(|expr| self.evaluate_expression(expr)).collect()),
         }
     }
 
@@ -70,6 +81,14 @@ impl Interpreter<'_> {
             BinOp::Less => Value::Boolean(self.evaluate_expression(expr1) < self.evaluate_expression(expr2)),
             BinOp::LessOrEqual => Value::Boolean(self.evaluate_expression(expr1) <= self.evaluate_expression(expr2)),
             BinOp::Index => todo!(),
+        }
+    }
+
+    fn evaluate_unary_op(&self, expr: &Expr, op: &UnaryOp) -> Value{
+        match op {
+            UnaryOp::Plus => self.evaluate_expression(expr), // do literally nothing lol
+            UnaryOp::Minus => -self.evaluate_expression(expr),
+            UnaryOp::Not => !self.evaluate_expression(expr),
         }
     }
 
