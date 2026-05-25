@@ -1,14 +1,2 @@
-var b := 7
-
-
-se b > 0 então
-  escreva "maior que 0"
-
-  var eh_pos := 1
-senão
-  escreva "menor que 0"
-
-  var eh_pos := 0
-fim
-
-escreva eh_pos
+var ola := "Ola mundo!"
+escreva ola
