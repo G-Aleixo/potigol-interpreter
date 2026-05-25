@@ -30,8 +30,6 @@ impl Interpreter {
             Stmt::ConstAssignment(varname, expr) => self.evaluate_const_assignment(varname, expr),
             Stmt::VarAssignment(varname, expr) => self.evaluate_var_assignment(varname, expr),
             Stmt::ExprStmt(expr) => self.evaluate_expr_stmt(expr),
-            Stmt::WriteStatement(expr) => self.execute_write(expr),
-            Stmt::PrintStatement(expr) => self.execute_print(expr),
         }
     }
 
@@ -62,16 +60,36 @@ impl Interpreter {
     }
 
     #[allow(unused_variables)]
-    fn evaluate_expression(&self, expr: &Expr) -> Value {
+    fn evaluate_expression(&mut self, expr: &Expr) -> Value {
         match expr {
             Expr::Literal(value) => value.clone().into(),
             Expr::Variable(varname) => self.get_var(varname).unwrap_or_else(|| panic!("Variable {varname} not defined")).clone(),
             Expr::Binary(expr1, bin_op, expr2) => self.evaluate_bin_op(expr1, bin_op, expr2),
             Expr::Unary(unary_op, expr) => self.evaluate_unary_op(expr, unary_op),
-            Expr::Ternary(expr, stmts, stmts1) => {
-                // check the expression and run corresponding body
-                // return the value of the final statement
-                todo!()
+            Expr::Ternary(expr, stmts_true, stmts_false) => {
+                let expr_result = bool::from(&self.evaluate_expression(expr));
+                let mut value = Value::None;
+                if expr_result {
+                    for i in 0..stmts_true.len() {
+                        if i == stmts_true.len() - 1 {
+                            value = self.interpret_single(&stmts_true[i]);
+                        }
+                        else {
+                            self.interpret_single(&stmts_true[i]);
+                        }
+                    };
+                } else {
+                    for i in 0..stmts_false.len() {
+                        if i == stmts_false.len() - 1 {
+                            value = self.interpret_single(&stmts_false[i]);
+                        }
+                        else {
+                            self.interpret_single(&stmts_false[i]);
+                        }
+                    };
+                }
+
+                value
             },
             Expr::Call(func_name, exprs) => {
                 // get the function statement body
@@ -87,7 +105,7 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_bin_op(&self, expr1: &Expr, op: &BinOp, expr2: &Expr) -> Value {
+    fn evaluate_bin_op(&mut self, expr1: &Expr, op: &BinOp, expr2: &Expr) -> Value {
         match op {
             BinOp::Plus => self.evaluate_expression(expr1) + self.evaluate_expression(expr2),
             BinOp::Minus => self.evaluate_expression(expr1) - self.evaluate_expression(expr2),
@@ -109,11 +127,13 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_unary_op(&self, expr: &Expr, op: &UnaryOp) -> Value{
+    fn evaluate_unary_op(&mut self, expr: &Expr, op: &UnaryOp) -> Value{
         match op {
             UnaryOp::Plus => self.evaluate_expression(expr), // do literally nothing lol
             UnaryOp::Minus => -self.evaluate_expression(expr),
             UnaryOp::Not => !self.evaluate_expression(expr),
+            UnaryOp::Print => self.execute_print(expr),
+            UnaryOp::Write => self.execute_write(expr),
         }
     }
 

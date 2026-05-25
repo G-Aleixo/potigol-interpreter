@@ -7,6 +7,7 @@ use crate::lexer::Token;
 pub enum ParseError {
     UnexpectedToken(Token),
     UnexpectedEOF,
+    EmptyStmt,
 }
 
 pub struct Parser {
@@ -62,11 +63,13 @@ impl Parser {
                             keyword if keyword == "se" => {
                                 self.parse_expr_stmt()
                             }
-                            keyword if keyword == "imprima" => {
-                                self.parse_write()
+
+                            kerword if keyword == "imprima" => {
+                                self.parse_expr_stmt()
                             }
-                            keyword if keyword == "escreva" => {
-                                self.parse_print()
+
+                            kerword if keyword == "escreva" => {
+                                self.parse_expr_stmt()
                             }
 
                             keyword => { panic!("Unknown keyword {keyword:?} found") }
@@ -81,22 +84,6 @@ impl Parser {
 
     fn parse_expr_stmt(&mut self) -> Result<Stmt, ParseError> {
         Ok(Stmt::ExprStmt(self.parse_expr(0)?))
-    }
-
-    fn parse_print(&mut self) -> Result<Stmt, ParseError> {
-        self.expect(Token::Keyword("escreva".to_string()))?;
-
-        let expr = self.parse_expr(0)?;
-
-        Ok(Stmt::PrintStatement(expr))
-    }
-
-    fn parse_write(&mut self) -> Result<Stmt, ParseError> {
-        self.expect(Token::Keyword("imprima".to_string()))?;
-
-        let expr = self.parse_expr(0)?;
-
-        Ok(Stmt::WriteStatement(expr))
     }
 
     fn parse_expr(&mut self, min_bp: u8) -> Result<Expr, ParseError>{
@@ -304,6 +291,7 @@ fn infix_binding_power(op: &str) -> Option<(u8, u8)> {
 
 fn prefix_binding_power(op: &str) -> ((), u8) {
     match op {
+        "imprima" | "escreva" => ((), 0),
         "não" => ((), 5),
         "+" | "-" => ((), 13),
 

@@ -13,8 +13,6 @@ pub enum Expr {
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
-    WriteStatement(Expr),
-    PrintStatement(Expr),
     ConstAssignment(String, Expr),
     VarAssignment(String, Expr),
     ExprStmt(Expr),
@@ -46,6 +44,8 @@ pub enum UnaryOp {
     Plus,
     Minus,
     Not,
+    Write,
+    Print,
 }
 
 #[derive(Debug, Clone)]
@@ -87,6 +87,8 @@ impl From<&String> for UnaryOp {
             "+" => Self::Plus,
             "-" => Self::Minus,
             "não" => Self::Not,
+            "imprima" => Self::Write,
+            "escreva" => Self::Print,
             v => panic!("Invalid suffix operator {v}")
         }
     }
@@ -150,6 +152,8 @@ impl std::fmt::Display for UnaryOp {
             UnaryOp::Plus => write!(f, "+"),
             UnaryOp::Minus => write!(f, "-"),
             UnaryOp::Not => write!(f, "!"),
+            UnaryOp::Write => write!(f, "imprima"),
+            UnaryOp::Print => write!(f, "escreva"),
         }
     }
 }

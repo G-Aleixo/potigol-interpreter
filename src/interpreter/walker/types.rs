@@ -129,6 +129,21 @@ impl From<parser::Value> for Value {
     }
 }
 
+impl From<&Value> for bool {
+    fn from(value: &Value) -> Self {
+        match value {
+            Value::Integer(num) => *num != 0,
+            Value::Float(num) => *num != 0.0,
+            Value::String(str) => !str.is_empty(),
+            Value::Boolean(bool) => *bool,
+            Value::Lambda(_, _) => true,
+            Value::List(values) => !values.is_empty(),
+            Value::Tuple(values) => !values.is_empty(),
+            Value::None => false,
+        }
+    }
+}
+
 impl std::ops::Add<Self> for Value {
     type Output = Value;
 
