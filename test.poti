@@ -1,3 +1,6 @@
 var aa := 2
 var b := aa ^ -1
 var x := (4 + 3) - aa * 5 / b
+
+imprima "O valor de x é "
+escreva x

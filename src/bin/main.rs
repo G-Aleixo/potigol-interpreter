@@ -9,6 +9,4 @@ fn main() {
     let mut interp = Interpreter::new();
 
     interp.interpret(parser::Parser::new(tokens).parse().unwrap());
-
-    println!("Value of x is {:?}", interp.get_var(&"x".to_string()));
 }

@@ -210,11 +210,11 @@ impl Trie {
     fn keywords() -> Trie {
         Trie::from(vec![
             // these are loaded in as a "std lib"
-            // "escreva",
-            // "imprima",
             // "leia_texto",
             // "leia_inteiro",
             // "leia_numero",
+            "escreva",
+            "imprima",
             "var",
             "falso",
             "verdadeiro",

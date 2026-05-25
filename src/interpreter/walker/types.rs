@@ -60,6 +60,7 @@ pub enum Value {
     Lambda(Vec<String>, Box<Expr>),
     List(Vec<Value>),
     Tuple(Vec<Value>),
+    None,
 }
 
 impl Value {
@@ -78,6 +79,41 @@ impl Value {
             (Value::Float(num1), Value::Float(num2)) => Value::Float(num1.powf(*num2)),
             (Value::Float(_), _) => panic!("Cannot pow float {self:?} with {other:?}"),
             _ => panic!("Cannot pow {self:?} with {other:?}")
+        }
+    }
+}
+
+impl std::fmt::Display for &Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Integer(num) => write!(f, "{num}"),
+            Value::Float(num) => write!(f, "{num}"),
+            Value::String(str) => write!(f, "{str}"),
+            Value::Boolean(bool) => write!(f, "{bool}"),
+            Value::Lambda(items, expr) => todo!(),
+            Value::List(values) => {
+                write!(f, "[")?;
+                for i in 0..values.len() {
+                    write!(f, "{}", &values[i])?;
+                    if i != values.len() - 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                write!(f, "]")
+            },
+            Value::Tuple(values) => {
+                write!(f, "(")?;
+                for i in 0..values.len() {
+                    write!(f, "{}", &values[i])?;
+                    if i != values.len() - 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                write!(f, ")")
+            },
+            Value::None => {
+                write!(f, "")
+            },
         }
     }
 }

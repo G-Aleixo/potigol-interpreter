@@ -62,7 +62,14 @@ impl Parser {
                             keyword if keyword == "se" => {
                                 self.parse_expr_stmt()
                             }
-                            keyword => { panic!("Unknown keyword \"{keyword:?}\" found") }
+                            keyword if keyword == "imprima" => {
+                                self.parse_write()
+                            }
+                            keyword if keyword == "escreva" => {
+                                self.parse_print()
+                            }
+
+                            keyword => { panic!("Unknown keyword {keyword:?} found") }
                         }
                     },
                     _ => self.parse_expr_stmt()
@@ -74,6 +81,22 @@ impl Parser {
 
     fn parse_expr_stmt(&mut self) -> Result<Stmt, ParseError> {
         Ok(Stmt::ExprStmt(self.parse_expr(0)?))
+    }
+
+    fn parse_print(&mut self) -> Result<Stmt, ParseError> {
+        self.expect(Token::Keyword("escreva".to_string()))?;
+
+        let expr = self.parse_expr(0)?;
+
+        Ok(Stmt::PrintStatement(expr))
+    }
+
+    fn parse_write(&mut self) -> Result<Stmt, ParseError> {
+        self.expect(Token::Keyword("imprima".to_string()))?;
+
+        let expr = self.parse_expr(0)?;
+
+        Ok(Stmt::WriteStatement(expr))
     }
 
     fn parse_expr(&mut self, min_bp: u8) -> Result<Expr, ParseError>{

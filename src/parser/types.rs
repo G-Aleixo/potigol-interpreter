@@ -13,6 +13,8 @@ pub enum Expr {
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
+    WriteStatement(Expr),
+    PrintStatement(Expr),
     ConstAssignment(String, Expr),
     VarAssignment(String, Expr),
     ExprStmt(Expr),

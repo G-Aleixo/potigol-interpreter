@@ -30,7 +30,21 @@ impl Interpreter {
             Stmt::ConstAssignment(varname, expr) => self.evaluate_const_assignment(varname, expr),
             Stmt::VarAssignment(varname, expr) => self.evaluate_var_assignment(varname, expr),
             Stmt::ExprStmt(expr) => self.evaluate_expr_stmt(expr),
+            Stmt::WriteStatement(expr) => self.execute_write(expr),
+            Stmt::PrintStatement(expr) => self.execute_print(expr),
         }
+    }
+
+    fn execute_print(&mut self, expr: &Expr) -> Value {
+        let value = self.evaluate_expression(expr);
+        println!("{}", &value);
+        Value::None
+    }
+
+    fn execute_write(&mut self, expr: &Expr) -> Value {
+        let value = self.evaluate_expression(expr);
+        print!("{}", &value);
+        Value::None
     }
 
     fn evaluate_const_assignment(&mut self, _varname: &String, _expr: &Expr) -> Value {
