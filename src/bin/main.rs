@@ -18,7 +18,8 @@ fn main() {
 
     let mut file = std::fs::File::open(filepath).expect("File doesn't exist");
     let mut contents = String::new();
-    file.read_to_string(&mut contents).expect("Could not read from file");
+    file.read_to_string(&mut contents)
+        .expect("Could not read from file");
 
     let tokens = tokenize(&contents).unwrap();
 

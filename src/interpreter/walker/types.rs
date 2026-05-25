@@ -6,7 +6,7 @@ use crate::parser::{self, Expr};
 pub struct Enviroment {
     parent: Option<Rc<RefCell<Enviroment>>>,
     const_vars: HashMap<String, Value>,
-    vars: HashMap<String, Value>
+    vars: HashMap<String, Value>,
 }
 
 impl Enviroment {
@@ -29,8 +29,8 @@ impl Enviroment {
     pub fn set_var(&mut self, varname: &String, value: Value) {
         self.vars.insert(varname.to_string(), value);
     }
-    
-    pub fn assign_var(&mut self, varname: &String, value: Value) -> Result<(), String>{
+
+    pub fn assign_var(&mut self, varname: &String, value: Value) -> Result<(), String> {
         if self.vars.contains_key(varname) {
             self.vars.insert(varname.to_string(), value);
             Ok(())
@@ -43,11 +43,19 @@ impl Enviroment {
     }
 
     pub fn empty() -> Enviroment {
-        Enviroment { parent: None, const_vars: HashMap::new(), vars: HashMap::new() }
+        Enviroment {
+            parent: None,
+            const_vars: HashMap::new(),
+            vars: HashMap::new(),
+        }
     }
 
     pub fn new_child(&self) -> Enviroment {
-        Enviroment { parent: Some(Rc::new(RefCell::new(self.clone()))), const_vars: HashMap::new(), vars: HashMap::new() }
+        Enviroment {
+            parent: Some(Rc::new(RefCell::new(self.clone()))),
+            const_vars: HashMap::new(),
+            vars: HashMap::new(),
+        }
     }
 }
 
@@ -67,18 +75,20 @@ impl Value {
     pub fn int_div(&self, other: &Value) -> Value {
         match (self, other) {
             (Value::Integer(num1), Value::Integer(num2)) => Value::Integer(num1 / num2),
-            _ => panic!("Cannot int div {self:?} with {other:?}")
+            _ => panic!("Cannot int div {self:?} with {other:?}"),
         }
     }
     pub fn pow(&self, other: &Value) -> Value {
         match (self, other) {
-            (Value::Integer(num1), Value::Integer(num2)) => Value::Float((*num1 as f64).powi(*num2 as i32)),
+            (Value::Integer(num1), Value::Integer(num2)) => {
+                Value::Float((*num1 as f64).powi(*num2 as i32))
+            }
             (Value::Integer(num1), Value::Float(num2)) => Value::Float((*num1 as f64).powf(*num2)),
             (Value::Integer(_), _) => panic!("Cannot pow integer {self:?} with {other:?}"),
             (Value::Float(num1), Value::Integer(num2)) => Value::Float(num1.powf(*num2 as f64)),
             (Value::Float(num1), Value::Float(num2)) => Value::Float(num1.powf(*num2)),
             (Value::Float(_), _) => panic!("Cannot pow float {self:?} with {other:?}"),
-            _ => panic!("Cannot pow {self:?} with {other:?}")
+            _ => panic!("Cannot pow {self:?} with {other:?}"),
         }
     }
 }
@@ -100,7 +110,7 @@ impl std::fmt::Display for &Value {
                     }
                 }
                 write!(f, "]")
-            },
+            }
             Value::Tuple(values) => {
                 write!(f, "(")?;
                 for i in 0..values.len() {
@@ -110,10 +120,10 @@ impl std::fmt::Display for &Value {
                     }
                 }
                 write!(f, ")")
-            },
+            }
             Value::None => {
                 write!(f, "")
-            },
+            }
         }
     }
 }
@@ -163,7 +173,7 @@ impl std::ops::Add<Self> for Value {
             (Value::String(str), Value::Boolean(bool)) => Value::String(format!("{str}{bool}")),
             (Value::String(_), _) => panic!("Cannot sum string {self:?} with {rhs:?}"),
             (Value::Boolean(_), _) => panic!("Cannot sum boolean {self:?} with {rhs:?}"),
-            _ => panic!("Cannot sum {self:?} with {rhs:?}")
+            _ => panic!("Cannot sum {self:?} with {rhs:?}"),
         }
     }
 }
@@ -181,9 +191,11 @@ impl std::ops::Sub<Self> for Value {
             (Value::Float(num1), Value::Float(num2)) => Value::Float(num1 - num2),
             (Value::Float(num1), Value::String(str)) => Value::String(format!("{num1}{str}")),
             (Value::Float(_), _) => panic!("Cannot sub float {self:?} with {rhs:?}"),
-            (Value::String(str), Value::String(str2)) => Value::String(str.chars().filter(|c| !str2.contains(*c)).collect()),
+            (Value::String(str), Value::String(str2)) => {
+                Value::String(str.chars().filter(|c| !str2.contains(*c)).collect())
+            }
             (Value::String(_), _) => panic!("Cannot sub string {self:?} with {rhs:?}"),
-            _ => panic!("Cannot sub {self:?} with {rhs:?}")
+            _ => panic!("Cannot sub {self:?} with {rhs:?}"),
         }
     }
 }
@@ -201,7 +213,7 @@ impl std::ops::Mul<Self> for Value {
             (Value::Float(_), _) => panic!("Cannot mul float {self:?} with {rhs:?}"),
             (Value::String(str), Value::Integer(num)) => Value::String(str.repeat(num as usize)),
             (Value::String(_), _) => panic!("Cannot mul string {self:?} with {rhs:?}"),
-            _ => panic!("Cannot sum {self:?} with {rhs:?}")
+            _ => panic!("Cannot sum {self:?} with {rhs:?}"),
         }
     }
 }
@@ -217,7 +229,7 @@ impl std::ops::Div<Self> for Value {
             (Value::Float(num1), Value::Integer(num2)) => Value::Float(num1 / num2 as f64),
             (Value::Float(num1), Value::Float(num2)) => Value::Float(num1 / num2),
             (Value::Float(_), _) => panic!("Cannot div float {self:?} with {rhs:?}"),
-            _ => panic!("Cannot div {self:?} with {rhs:?}")
+            _ => panic!("Cannot div {self:?} with {rhs:?}"),
         }
     }
 }
@@ -233,7 +245,7 @@ impl std::ops::Rem<Self> for Value {
             (Value::Float(num1), Value::Integer(num2)) => Value::Float(num1 % num2 as f64),
             (Value::Float(num1), Value::Float(num2)) => Value::Float(num1 % num2),
             (Value::Float(_), _) => panic!("Cannot mod float {self:?} with {rhs:?}"),
-            _ => panic!("Cannot mod {self:?} with {rhs:?}")
+            _ => panic!("Cannot mod {self:?} with {rhs:?}"),
         }
     }
 }
@@ -244,7 +256,7 @@ impl std::ops::BitAnd<Self> for Value {
     fn bitand(self, rhs: Self) -> Self::Output {
         match (self.clone(), rhs.clone()) {
             (Value::Boolean(bool1), Value::Boolean(bool2)) => Value::Boolean(bool1 && bool2),
-            _ => panic!("Cannot and {self:?} with {rhs:?}")
+            _ => panic!("Cannot and {self:?} with {rhs:?}"),
         }
     }
 }
@@ -255,7 +267,7 @@ impl std::ops::BitOr<Self> for Value {
     fn bitor(self, rhs: Self) -> Self::Output {
         match (self.clone(), rhs.clone()) {
             (Value::Boolean(bool1), Value::Boolean(bool2)) => Value::Boolean(bool1 || bool2),
-            _ => panic!("Cannot or {self:?} with {rhs:?}")
+            _ => panic!("Cannot or {self:?} with {rhs:?}"),
         }
     }
 }
@@ -267,7 +279,7 @@ impl std::ops::Neg for Value {
         match self {
             Value::Integer(num) => Value::Integer(-num),
             Value::Float(num) => Value::Float(-num),
-            _ => panic!("Cannot negate {self:?}")
+            _ => panic!("Cannot negate {self:?}"),
         }
     }
 }
@@ -278,7 +290,7 @@ impl std::ops::Not for Value {
     fn not(self) -> Self::Output {
         match self {
             Value::Boolean(bool) => Value::Boolean(!bool),
-            _ => panic!("Cannot invert {self:?}")
+            _ => panic!("Cannot invert {self:?}"),
         }
     }
 }
@@ -299,7 +311,7 @@ impl PartialOrd<Self> for Value {
             (Value::Float(num1), Value::Integer(num2)) => num1 >= num2 as f64,
             (Value::Float(num1), Value::Float(num2)) => num1 >= num2,
             (Value::String(_), Value::String(_)) => todo!(),
-            _ => panic!("Cannot compare {self:?} with {rhs:?}")
+            _ => panic!("Cannot compare {self:?} with {rhs:?}"),
         }
     }
 
@@ -311,7 +323,7 @@ impl PartialOrd<Self> for Value {
             (Value::Float(num1), Value::Integer(num2)) => num1 <= num2 as f64,
             (Value::Float(num1), Value::Float(num2)) => num1 <= num2,
             (Value::String(_), Value::String(_)) => todo!(),
-            _ => panic!("Cannot compare {self:?} with {rhs:?}")
+            _ => panic!("Cannot compare {self:?} with {rhs:?}"),
         }
     }
 
@@ -323,10 +335,9 @@ impl PartialOrd<Self> for Value {
             (Value::Float(num1), Value::Integer(num2)) => num1 > num2 as f64,
             (Value::Float(num1), Value::Float(num2)) => num1 > num2,
             (Value::String(_), Value::String(_)) => todo!(),
-            _ => panic!("Cannot compare {self:?} with {rhs:?}")
+            _ => panic!("Cannot compare {self:?} with {rhs:?}"),
         }
     }
-
 
     fn lt(&self, rhs: &Self) -> bool {
         match (self.clone(), rhs.clone()) {
@@ -336,17 +347,17 @@ impl PartialOrd<Self> for Value {
             (Value::Float(num1), Value::Integer(num2)) => num1 < num2 as f64,
             (Value::Float(num1), Value::Float(num2)) => num1 < num2,
             (Value::String(_), Value::String(_)) => todo!(),
-            _ => panic!("Cannot compare {self:?} with {rhs:?}")
+            _ => panic!("Cannot compare {self:?} with {rhs:?}"),
         }
     }
 
     fn partial_cmp(&self, rhs: &Self) -> Option<std::cmp::Ordering> {
         if self.lt(rhs) {
-            return Some(std::cmp::Ordering::Less)
+            return Some(std::cmp::Ordering::Less);
         } else if self.gt(rhs) {
-            return Some(std::cmp::Ordering::Greater)
+            return Some(std::cmp::Ordering::Greater);
         } else if self.eq(rhs) {
-            return Some(std::cmp::Ordering::Equal)
+            return Some(std::cmp::Ordering::Equal);
         }
 
         None

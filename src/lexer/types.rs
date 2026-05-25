@@ -19,26 +19,26 @@ pub enum Token {
 
 #[derive(Debug, PartialEq)]
 pub struct Identifier {
-    pub symbol: String
+    pub symbol: String,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Type {
-    pub symbol: String
+    pub symbol: String,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Keyword {
-    pub keyword: String
+    pub keyword: String,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Operation {
-    pub operation: String
+    pub operation: String,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct BlockDelimeter {
     pub delimeter: String,
-    pub is_close: bool
+    pub is_close: bool,
 }

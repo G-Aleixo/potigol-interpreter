@@ -76,7 +76,7 @@ impl From<&String> for BinOp {
             "<" => Self::Less,
             "<=" => Self::LessOrEqual,
             "[" => Self::Index,
-            v => panic!("Invalid infix operator {v}")
+            v => panic!("Invalid infix operator {v}"),
         }
     }
 }
@@ -89,7 +89,7 @@ impl From<&String> for UnaryOp {
             "não" => Self::Not,
             "imprima" => Self::Write,
             "escreva" => Self::Print,
-            v => panic!("Invalid suffix operator {v}")
+            v => panic!("Invalid suffix operator {v}"),
         }
     }
 }
@@ -102,7 +102,9 @@ impl std::fmt::Debug for Expr {
             Expr::Variable(var) => write!(f, "{var}"),
             Expr::Binary(expr1, bin_op, expr2) => write!(f, "({bin_op} {expr1:?} {expr2:?})"),
             Expr::Unary(unary_op, expr) => write!(f, "({unary_op} {expr:?})"),
-            Expr::Ternary(condition, branch1, branch2) => write!(f, "{condition:?} {branch1:?} {branch2:?}"),
+            Expr::Ternary(condition, branch1, branch2) => {
+                write!(f, "{condition:?} {branch1:?} {branch2:?}")
+            }
             Expr::Call(_, _exprs) => todo!(),
             Expr::Lambda(_items, _expr) => todo!(),
             Expr::List(_exprs) => todo!(),
@@ -117,7 +119,7 @@ impl std::fmt::Display for Value {
             Value::Integer(int) => write!(f, "{int}"),
             Value::Float(float) => write!(f, "{float}"),
             Value::String(str) => write!(f, "{str}"),
-            Value::Boolean(bool) => write!(f, "{bool}")
+            Value::Boolean(bool) => write!(f, "{bool}"),
         }
     }
 }

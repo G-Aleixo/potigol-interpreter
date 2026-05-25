@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 pub use crate::lexer::types::*;
 
-
 pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
     let mut tokens = vec![];
     let keywords = Trie::keywords();
@@ -34,7 +33,7 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
 
                 while i < chars.len() && (chars[i].is_ascii_digit() || chars[i] == '.') {
                     if chars[i] == '.' && has_dot {
-                        break
+                        break;
                     }
                     if chars[i] == '.' {
                         has_dot = true;
@@ -45,17 +44,19 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
                 }
                 if let Ok(int) = num.parse() {
                     tokens.push(Token::Integer(int));
-                }else if let Ok(float) = num.parse() {
+                } else if let Ok(float) = num.parse() {
                     tokens.push(Token::Float(float));
                 } else {
                     return Err("Could not parse num as any number type");
                 }
 
-                continue
+                continue;
             }
             c if c.is_alphabetic() => {
                 let mut ident = String::new();
-                while i < chars.len() && (chars[i].is_alphanumeric() || matches!(chars[i], '_' | '-')) {
+                while i < chars.len()
+                    && (chars[i].is_alphanumeric() || matches!(chars[i], '_' | '-'))
+                {
                     ident.push(chars[i]);
                     i += 1;
                 }
@@ -63,9 +64,9 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
                 if keywords.contains(&ident) {
                     tokens.push(Token::Keyword(ident))
                 } else if types.contains(&ident) {
-                    tokens.push(Token::Type(ident))  
+                    tokens.push(Token::Type(ident))
                 } else if operators.contains(&ident) {
-                    tokens.push(Token::Operation(ident))  
+                    tokens.push(Token::Operation(ident))
                 } else {
                     tokens.push(Token::Identifier(ident));
                 }
@@ -79,7 +80,7 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
                     i += 1;
                 }
                 if i == chars.len() && !string.ends_with('"') {
-                    return Err("Unexpected EOF")
+                    return Err("Unexpected EOF");
                 }
 
                 tokens.push(Token::String(string));
@@ -92,7 +93,7 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
                     i += 1;
                 }
                 if i == chars.len() && !string.ends_with('\'') {
-                    return Err("Unexpected EOF")
+                    return Err("Unexpected EOF");
                 }
 
                 tokens.push(Token::String(string));
@@ -101,9 +102,15 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
                 let tmp = i + 1;
                 if tmp < chars.len() {
                     match chars[tmp] {
-                        '=' => { tokens.push(Token::Operation(String::from(":="))); i += 1 }
-                        ':' => { tokens.push(Token::Operation(String::from("::"))); i += 1 }
-                        _ => { tokens.push(Token::Colon) }
+                        '=' => {
+                            tokens.push(Token::Operation(String::from(":=")));
+                            i += 1
+                        }
+                        ':' => {
+                            tokens.push(Token::Operation(String::from("::")));
+                            i += 1
+                        }
+                        _ => tokens.push(Token::Colon),
                     }
                 } else {
                     tokens.push(Token::Colon);
@@ -113,9 +120,15 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
                 let tmp = i + 1;
                 if tmp < chars.len() {
                     match chars[tmp] {
-                        '=' =>  { tokens.push(Token::Operation(String::from("=="))); i += 1 }
-                        '>' =>  { tokens.push(Token::Operation(String::from("=>"))); i += 1 }
-                        _ => { tokens.push(Token::Operation(String::from("="))) }
+                        '=' => {
+                            tokens.push(Token::Operation(String::from("==")));
+                            i += 1
+                        }
+                        '>' => {
+                            tokens.push(Token::Operation(String::from("=>")));
+                            i += 1
+                        }
+                        _ => tokens.push(Token::Operation(String::from("="))),
                     }
                 } else {
                     tokens.push(Token::Operation(String::from("=")))
@@ -125,9 +138,15 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
                 let tmp = i + 1;
                 if tmp < chars.len() {
                     match chars[tmp] {
-                        '=' =>  { tokens.push(Token::Operation(String::from("<="))); i += 1 }
-                        '>' =>  { tokens.push(Token::Operation(String::from("<>"))); i += 1 }
-                        _ =>  { tokens.push(Token::Operation(String::from("<"))) }
+                        '=' => {
+                            tokens.push(Token::Operation(String::from("<=")));
+                            i += 1
+                        }
+                        '>' => {
+                            tokens.push(Token::Operation(String::from("<>")));
+                            i += 1
+                        }
+                        _ => tokens.push(Token::Operation(String::from("<"))),
                     }
                 } else {
                     tokens.push(Token::Operation(String::from("<")))
@@ -137,8 +156,11 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
                 let tmp = i + 1;
                 if tmp < chars.len() {
                     match chars[tmp] {
-                        '=' =>  { tokens.push(Token::Operation(String::from(">="))); i += 1 }
-                        _ => { tokens.push(Token::Operation(String::from(">"))) }
+                        '=' => {
+                            tokens.push(Token::Operation(String::from(">=")));
+                            i += 1
+                        }
+                        _ => tokens.push(Token::Operation(String::from(">"))),
                     }
                 } else {
                     tokens.push(Token::Operation(String::from(">")))
@@ -162,7 +184,7 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
 
         i += 1;
     }
-    
+
     Ok(tokens)
 }
 
@@ -174,7 +196,10 @@ pub struct Trie {
 
 impl Trie {
     pub fn new() -> Trie {
-        Trie { children: HashMap::new(), is_leaf: true }
+        Trie {
+            children: HashMap::new(),
+            is_leaf: true,
+        }
     }
 
     pub fn insert(&mut self, text: &str) {
@@ -197,13 +222,13 @@ impl Trie {
 
     fn contains_bytes(&self, text: &[u8]) -> bool {
         if text.is_empty() {
-            return true
-        } else if self.is_leaf && !text.is_empty(){
-            return false
-        } else if let Some(child) = self.children.get(&text[0]){
+            return true;
+        } else if self.is_leaf && !text.is_empty() {
+            return false;
+        } else if let Some(child) = self.children.get(&text[0]) {
             return child.contains_bytes(&text[1..text.len()]);
         };
-        
+
         false
     }
 
@@ -252,10 +277,7 @@ impl Trie {
         ])
     }
     fn operators() -> Trie {
-        Trie::from(vec![
-            "div",
-            "mod"
-        ])
+        Trie::from(vec!["div", "mod"])
     }
 }
 
