@@ -25,7 +25,7 @@ fn main() {
 
     let ast = parser::Parser::new(tokens.clone()).parse().unwrap();
 
-    let mut interp = Interpreter::new();
+    let mut interp = Interpreter::default();
 
     interp.interpret(ast);
 }

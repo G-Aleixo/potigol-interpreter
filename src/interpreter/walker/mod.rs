@@ -1,5 +1,7 @@
 pub mod types;
 
+use std::io::{BufRead, Write};
+
 use types::*;
 
 use crate::parser::{BinOp, Expr, Stmt, UnaryOp};
@@ -10,16 +12,40 @@ pub struct Interpreter {
 
 impl Default for Interpreter {
     fn default() -> Self {
-        Self::new()
+        Self::loaded()
     }
 }
 
 impl Interpreter {
-    pub fn new() -> Interpreter {
+    pub fn empty() -> Interpreter {
         Interpreter {
             envs: vec![Enviroment::empty()],
         }
     }
+
+    pub fn loaded() -> Interpreter {
+        let mut interp = Self::empty();
+
+        interp.envs[0].new_override(&"leia_texto".to_string(), |_| {
+            let mut stdin = std::io::stdin().lock();
+            let mut buf = String::new();
+            stdin.read_line(&mut buf).expect("Failed to read from stdin");
+            Value::String(buf.trim_end().to_string())
+        }).expect("Failed to inject \"leia_texto\" override");
+
+        interp.envs[0].new_override(&"leia_inteiro".to_string(), |_| {
+            let mut stdin = std::io::stdin().lock();
+            let mut buf = String::new();
+            stdin.read_line(&mut buf).expect("Failed to read from stdin");
+            match buf.trim().parse() {
+                Ok(num) => Value::Integer(num),
+                Err(e) => panic!("{e}"),
+            }
+        }).expect("Failed to inject \"leia_inteiro\" override");
+
+        interp
+    }
+
     pub fn interpret(&mut self, statements: Vec<Stmt>) {
         for statement in statements {
             self.interpret_single(&statement);
@@ -36,13 +62,17 @@ impl Interpreter {
 
     fn execute_print(&mut self, expr: &Expr) -> Value {
         let value = self.evaluate_expression(expr);
+        let mut stdout = std::io::stdout().lock();
         println!("{}", &value);
+        stdout.flush().expect("Could not flush to stdout");
         Value::None
     }
 
     fn execute_write(&mut self, expr: &Expr) -> Value {
         let value = self.evaluate_expression(expr);
+        let mut stdout = std::io::stdout().lock();
         print!("{}", &value);
+        stdout.flush().expect("Could not flush to stdout");
         Value::None
     }
 

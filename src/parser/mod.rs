@@ -35,6 +35,10 @@ impl Parser {
             Some(token) => {
                 match token {
                     Token::Unknown(tok) => panic!("Found unknown token {tok} while parsing"),
+                    Token::NewLine => {
+                        self.next();
+                        self.parse_stmt()
+                    }
                     Token::Keyword(keyword) => {
                         match keyword {
                             keyword if keyword == "var" => {
@@ -61,9 +65,9 @@ impl Parser {
                             }
                             keyword if keyword == "se" => self.parse_expr_stmt(),
 
-                            kerword if keyword == "imprima" => self.parse_expr_stmt(),
+                            keyword if keyword == "imprima" => self.parse_expr_stmt(),
 
-                            kerword if keyword == "escreva" => self.parse_expr_stmt(),
+                            keyword if keyword == "escreva" => self.parse_expr_stmt(),
 
                             keyword => {
                                 panic!("Unknown keyword {keyword:?} found")
@@ -142,6 +146,9 @@ impl Parser {
 
             Token::Keyword(keyword) => {
                 let kw = keyword.clone();
+                if matches!(kw.as_ref(), "var") {
+                    
+                };
                 let ((), r_bp) = prefix_binding_power(&kw);
                 let rhs = self.parse_expr(r_bp)?;
 

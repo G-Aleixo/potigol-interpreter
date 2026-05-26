@@ -1,2 +1,28 @@
-var ola := "Ola mundo!"
-escreva ola
+imprima "Qual o primeiro número: "
+
+var num1 := leia_inteiro
+
+imprima "Qual o segundo número: "
+
+var num2 := leia_inteiro
+
+imprima "Qual a operação? "
+
+var op := leia_texto
+
+var resultado := 0
+
+escreva "calculando resultado..."
+
+se op == "+" então
+  var resultado := num1 + num2
+senãose op == "-" então
+  var resultado := num1 - num2
+senãose op == "*" então
+  var resultado := num1 * num2
+senãose op == "/" então
+  var resultado := num1 / num2
+fim
+
+
+escreva resultado

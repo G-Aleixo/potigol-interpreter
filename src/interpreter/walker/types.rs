@@ -7,10 +7,15 @@ pub struct Enviroment {
     parent: Option<Rc<RefCell<Enviroment>>>,
     const_vars: HashMap<String, Value>,
     vars: HashMap<String, Value>,
+    overrides: HashMap<String, fn(&Enviroment) -> Value>
 }
 
 impl Enviroment {
     pub fn resolve(&self, varname: &String) -> Option<Value> {
+        // Check overrides
+        if let Some(func) = self.overrides.get(varname) {
+            return Some(func(self));
+        }
         // Check constants
         if let Some(value) = self.const_vars.get(varname) {
             return Some(value.clone());
@@ -42,11 +47,21 @@ impl Enviroment {
         }
     }
 
+    pub fn new_override(&mut self, override_name: &String, func: fn(&Enviroment) -> Value) -> Result<(), String> {
+        if let None = self.overrides.get(override_name) {
+            self.overrides.insert(override_name.clone(), func);
+            Ok(())
+        } else {
+            Err(format!("Override {} already exists", override_name))
+        }
+    }
+
     pub fn empty() -> Enviroment {
         Enviroment {
             parent: None,
             const_vars: HashMap::new(),
             vars: HashMap::new(),
+            overrides: HashMap::new(),
         }
     }
 
@@ -55,6 +70,7 @@ impl Enviroment {
             parent: Some(Rc::new(RefCell::new(self.clone()))),
             const_vars: HashMap::new(),
             vars: HashMap::new(),
+            overrides: HashMap::new(),
         }
     }
 }
