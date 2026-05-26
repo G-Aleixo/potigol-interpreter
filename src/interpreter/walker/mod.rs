@@ -43,6 +43,16 @@ impl Interpreter {
             }
         }).expect("Failed to inject \"leia_inteiro\" override");
 
+        interp.envs[0].new_override(&"leia_numero".to_string(), |_| {
+            let mut stdin = std::io::stdin().lock();
+            let mut buf = String::new();
+            stdin.read_line(&mut buf).expect("Failed to read from stdin");
+            match buf.trim().parse() {
+                Ok(num) => Value::Float(num),
+                Err(e) => panic!("{e}"),
+            }
+        }).expect("Failed to inject \"leia_numero\" override");
+
         interp
     }
 

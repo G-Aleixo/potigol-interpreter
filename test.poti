@@ -1,10 +1,10 @@
 imprima "Qual o primeiro número: "
 
-var num1 := leia_inteiro
+var num1 := leia_numero
 
 imprima "Qual o segundo número: "
 
-var num2 := leia_inteiro
+var num2 := leia_numero
 
 imprima "Qual a operação? "
 
