@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::parser::{self, Expr};
+use crate::{parser::{self, Expr}};
 
 #[derive(Clone)]
 pub struct Enviroment {
@@ -116,7 +116,7 @@ impl std::fmt::Display for &Value {
             Value::Float(num) => write!(f, "{num}"),
             Value::String(str) => write!(f, "{str}"),
             Value::Boolean(bool) => write!(f, "{bool}"),
-            Value::Lambda(items, expr) => todo!(),
+            Value::Lambda(_items, _expr) => todo!(),
             Value::List(values) => {
                 write!(f, "[")?;
                 for i in 0..values.len() {
@@ -149,7 +149,6 @@ impl From<parser::Value> for Value {
         match value {
             parser::Value::Integer(int) => Self::Integer(int),
             parser::Value::Float(float) => Self::Float(float),
-            parser::Value::String(string) => Self::String(string),
             parser::Value::Boolean(bool) => Self::Boolean(bool),
         }
     }

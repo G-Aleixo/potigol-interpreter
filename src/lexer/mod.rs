@@ -2,6 +2,7 @@ pub mod types;
 
 use std::collections::HashMap;
 
+use crate::lexer::Token::StringEnd;
 pub use crate::lexer::types::*;
 
 pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
@@ -73,17 +74,55 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
                 continue;
             }
             '"' => {
+                tokens.push(Token::StringStart);
                 i += 1;
                 let mut string = String::new();
-                while i < chars.len() && chars[i] != '"' {
-                    string.push(chars[i]);
-                    i += 1;
+                while i < chars.len() {
+                    match chars[i] {
+                        '"' => {
+                            break
+                        }
+                        '{' => {
+                            if !string.is_empty() {
+                                tokens.push(Token::StringFragment(string.clone()));
+                                string.clear();
+                            }
+                            tokens.push(Token::ExprStart);
+                            i += 1;
+                            let mut level = 1;
+                            let mut inner = String::new();
+
+                            while i < chars.len() && level != 0 {
+                                match chars[i] {
+                                    '{' => { level += 1 },
+                                    '}' => { level -= 1 },
+                                    _ => {},
+                                }
+                                inner.push(chars[i]);
+                                i += 1;
+                            }
+
+                            let inner_tokens = tokenize(&inner[..inner.len()-1])?;
+                            tokens.extend(inner_tokens);
+
+                            tokens.push(Token::ExprEnd);
+                        }
+                        ch => {
+                            string.push(ch);
+                            i += 1;
+                        }
+                    }
                 }
+
                 if i == chars.len() && !string.ends_with('"') {
                     return Err("Unexpected EOF");
                 }
 
-                tokens.push(Token::String(string));
+                if !string.is_empty() {
+                    tokens.push(Token::StringFragment(string));
+                }
+
+                tokens.push(StringEnd);
             }
             '\'' => {
                 i += 1;
@@ -96,7 +135,9 @@ pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
                     return Err("Unexpected EOF");
                 }
 
-                tokens.push(Token::String(string));
+                tokens.push(Token::StringStart);
+                tokens.push(Token::StringFragment(string));
+                tokens.push(Token::StringEnd);
             }
             ':' => {
                 let tmp = i + 1;

@@ -2,7 +2,11 @@
 pub enum Token {
     Identifier(String),
     Type(String),
-    String(String),
+    StringStart,
+    StringFragment(String),
+    ExprStart,
+    ExprEnd,
+    StringEnd,
     Character(char),
     Integer(i64),
     Float(f64),

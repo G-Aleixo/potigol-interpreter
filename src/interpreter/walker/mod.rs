@@ -4,7 +4,7 @@ use std::io::{BufRead, Write};
 
 use types::*;
 
-use crate::parser::{BinOp, Expr, Stmt, UnaryOp};
+use crate::parser::{BinOp, Expr, Stmt, StringPart, UnaryOp};
 
 pub struct Interpreter {
     envs: Vec<Enviroment>,
@@ -104,6 +104,7 @@ impl Interpreter {
     fn evaluate_expression(&mut self, expr: &Expr) -> Value {
         match expr {
             Expr::Literal(value) => value.clone().into(),
+            Expr::String(parts) => self.evaluate_string(parts),
             Expr::Variable(varname) => self
                 .get_var(varname)
                 .unwrap_or_else(|| panic!("Variable {varname} not defined"))
@@ -203,6 +204,19 @@ impl Interpreter {
             UnaryOp::Print => self.execute_print(expr),
             UnaryOp::Write => self.execute_write(expr),
         }
+    }
+
+    fn evaluate_string(&mut self, parts: &Vec<StringPart>) -> Value {
+        let mut string = String::new();
+
+        for part in parts {
+            match part {
+                StringPart::Fragment(str) => string.push_str(str),
+                StringPart::Expr(expr) => string.push_str(&format!("{}", &self.evaluate_expression(expr))),
+            };
+        }
+
+        Value::String(string)
     }
 
     pub fn get_var(&self, varname: &String) -> Option<Value> {

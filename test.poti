@@ -25,4 +25,4 @@ senãose op == "/" então
 fim
 
 
-escreva resultado
+escreva "o resultado é {resultado}"

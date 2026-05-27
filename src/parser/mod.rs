@@ -100,8 +100,8 @@ impl Parser {
 
         let mut lhs = match token {
             Token::Identifier(ident) => Expr::Variable(ident.clone()),
-            Token::String(str) => Expr::Literal(Value::String(str.clone())),
-            Token::Character(char) => Expr::Literal(Value::String(char.to_string())),
+            Token::StringStart => { self.parse_fstring()? },
+            Token::Character(char) => Expr::String(vec![StringPart::Fragment(char.to_string())]),
             Token::Integer(int) => Expr::Literal(Value::Integer(*int)),
             Token::Float(float) => Expr::Literal(Value::Float(*float)),
             Token::Boolean(bool) => Expr::Literal(Value::Boolean(*bool)),
@@ -174,6 +174,9 @@ impl Parser {
                     self.next();
                     continue;
                 }
+                Token::ExprEnd => {
+                    break
+                }
                 tok => return Err(ParseError::UnexpectedToken(tok.clone())),
             };
 
@@ -188,7 +191,8 @@ impl Parser {
                     let rhs = self.parse_expr(0)?;
                     self.expect(Token::BlockDelimeter("]".to_owned(), true))?;
                     Expr::Binary(Box::new(lhs), (&op).into(), Box::new(rhs))
-                } else {
+                }
+                else {
                     Expr::Unary((&op).into(), Box::new(lhs))
                 };
                 continue;
@@ -264,6 +268,33 @@ impl Parser {
             stmts.push(self.parse_stmt()?);
         }
         Ok(stmts)
+    }
+
+    fn parse_fstring(&mut self) -> Result<Expr, ParseError> {
+        let mut parts = vec![];
+
+        // already past the string start
+        while let Some(tok) = self.peek() {
+            match tok {
+                Token::StringEnd => break,
+                Token::StringFragment(str) => {
+                    let str = str.clone();
+                    self.next();
+                    parts.push(StringPart::Fragment(str));
+                },
+                Token::ExprStart => {
+                    self.next();
+                    let expr = self.parse_expr(0)?;
+                    self.expect(Token::ExprEnd)?;
+                    parts.push(StringPart::Expr(expr));
+                },
+                _ => return Err(ParseError::UnexpectedToken(tok.clone()))
+            }
+        }
+
+        self.expect(Token::StringEnd)?;
+
+        Ok(Expr::String(parts))
     }
 
     // --- new helper: check next token is a specific keyword (by string) ---

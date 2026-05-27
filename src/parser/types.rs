@@ -1,6 +1,7 @@
 #[derive(Clone)]
 pub enum Expr {
     Literal(Value),
+    String(Vec<StringPart>),
     Variable(String),
     Binary(Box<Expr>, BinOp, Box<Expr>),
     Unary(UnaryOp, Box<Expr>),
@@ -52,8 +53,13 @@ pub enum UnaryOp {
 pub enum Value {
     Integer(i64),
     Float(f64),
-    String(String),
     Boolean(bool),
+}
+
+#[derive(Debug, Clone)]
+pub enum StringPart {
+    Fragment(String),
+    Expr(Expr)
 }
 
 impl From<&String> for BinOp {
@@ -99,6 +105,7 @@ impl std::fmt::Debug for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Expr::Literal(value) => write!(f, "{value}"),
+            Expr::String(string) => write!(f, "{string:?}"),
             Expr::Variable(var) => write!(f, "{var}"),
             Expr::Binary(expr1, bin_op, expr2) => write!(f, "({bin_op} {expr1:?} {expr2:?})"),
             Expr::Unary(unary_op, expr) => write!(f, "({unary_op} {expr:?})"),
@@ -118,7 +125,6 @@ impl std::fmt::Display for Value {
         match self {
             Value::Integer(int) => write!(f, "{int}"),
             Value::Float(float) => write!(f, "{float}"),
-            Value::String(str) => write!(f, "{str}"),
             Value::Boolean(bool) => write!(f, "{bool}"),
         }
     }
