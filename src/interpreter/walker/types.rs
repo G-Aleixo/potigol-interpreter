@@ -113,7 +113,7 @@ impl std::fmt::Display for &Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Value::Integer(num) => write!(f, "{num}"),
-            Value::Float(num) => write!(f, "{num}"),
+            Value::Float(num) => write!(f, "{num:?}"), // show x.0 as x.0 instead of x
             Value::String(str) => write!(f, "{str}"),
             Value::Boolean(bool) => write!(f, "{bool}"),
             Value::Lambda(_items, _expr) => todo!(),
