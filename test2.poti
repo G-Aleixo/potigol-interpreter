@@ -1,0 +1,8 @@
+var x := 0
+
+enquanto x < 10 faça
+  escreva "ola mundo :)"
+  var x := x + 1
+fim
+
+escreva "cabou"

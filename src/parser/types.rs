@@ -6,6 +6,7 @@ pub enum Expr {
     Binary(Box<Expr>, BinOp, Box<Expr>),
     Unary(UnaryOp, Box<Expr>),
     Ternary(Box<Expr>, Vec<Stmt>, Vec<Stmt>),
+    While(Box<Expr>, Vec<Stmt>),
     Call(String, Vec<Expr>),
     Lambda(Vec<String>, Box<Expr>), // argument names, expression
     List(Vec<Expr>),
@@ -111,6 +112,9 @@ impl std::fmt::Debug for Expr {
             Expr::Unary(unary_op, expr) => write!(f, "({unary_op} {expr:?})"),
             Expr::Ternary(condition, branch1, branch2) => {
                 write!(f, "{condition:?} {branch1:?} {branch2:?}")
+            }
+            Expr::While(condition, stmts) => {
+                write!(f, "{condition:?} {stmts:?}")
             }
             Expr::Call(_, _exprs) => todo!(),
             Expr::Lambda(_items, _expr) => todo!(),

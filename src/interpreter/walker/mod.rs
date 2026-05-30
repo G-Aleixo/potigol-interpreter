@@ -134,6 +134,20 @@ impl Interpreter {
 
                 value
             }
+            Expr::While(cond, stmts) => {
+                let mut result = Value::None;
+                while bool::from(&self.evaluate_expression(cond)) {
+                    for i in 0..stmts.len() {
+                        if i == stmts.len() - 1 {
+                            result = self.interpret_single(&stmts[i]);
+                        } else {
+                            self.interpret_single(&stmts[i]);
+                        }
+                    }
+                }
+
+                result
+            },
             Expr::Call(func_name, exprs) => {
                 // get the function statement body
                 // create a new enviroment and append it to the env stack

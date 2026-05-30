@@ -65,6 +65,8 @@ impl Parser {
                             }
                             keyword if keyword == "se" => self.parse_expr_stmt(),
 
+                            keyword if keyword == "enquanto" => self.parse_expr_stmt(),
+
                             keyword if keyword == "imprima" => self.parse_expr_stmt(),
 
                             keyword if keyword == "escreva" => self.parse_expr_stmt(),
@@ -142,6 +144,14 @@ impl Parser {
                 }
 
                 Expr::Ternary(Box::new(cond), then_stmts, else_stmts)
+            }
+
+            Token::Keyword(keyword) if keyword == "enquanto" => {
+                let cond = self.parse_expr(0)?;
+                self.expect(Token::Keyword("faça".to_string()))?;
+                let stmts = self.parse_block_until_keyword(&["fim"])?;
+                self.expect(Token::Keyword("fim".to_string()))?;
+                Expr::While(Box::new(cond), stmts)
             }
 
             Token::Keyword(keyword) => {
