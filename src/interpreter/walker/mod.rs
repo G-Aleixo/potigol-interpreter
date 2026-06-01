@@ -149,7 +149,7 @@ impl Interpreter {
                 result
             },
             Expr::For(control_var, start, stop, step, stmts) => {
-                let mut result = Value::None;
+                let result = Value::None;
 
                 let start = self.evaluate_expression(start);
                 let stop = self.evaluate_expression(stop);
@@ -159,16 +159,16 @@ impl Interpreter {
 
                 if start <= stop {
                     while self.get_var(control_var).expect("control variable not found") <= stop {
-                        for i in 0..stmts.len() {
-                            self.interpret_single(&stmts[i]);
+                        for stmt in stmts {
+                            self.interpret_single(stmt);
                         }
 
                         self.set_var(control_var, &(self.get_var(control_var).expect("control variable not found") + step.clone()));
                     }
                 } else {
                     while self.get_var(control_var).expect("control variable not found") >= stop {
-                        for i in 0..stmts.len() {
-                            self.interpret_single(&stmts[i]);
+                        for stmt in stmts {
+                            self.interpret_single(stmt);
                         }
 
                         self.set_var(control_var, &(self.get_var(control_var).expect("control variable not found") + step.clone()));

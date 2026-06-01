@@ -48,7 +48,7 @@ impl Enviroment {
     }
 
     pub fn new_override(&mut self, override_name: &String, func: fn(&Enviroment) -> Value) -> Result<(), String> {
-        if let None = self.overrides.get(override_name) {
+        if !self.overrides.contains_key(override_name) {
             self.overrides.insert(override_name.clone(), func);
             Ok(())
         } else {
