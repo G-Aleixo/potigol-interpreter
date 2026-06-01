@@ -92,7 +92,7 @@ impl Interpreter {
 
     fn evaluate_var_assignment(&mut self, varname: &String, expr: &Expr) -> Value {
         let value = self.evaluate_expression(expr);
-        self.set_var(varname, value.clone());
+        self.set_var(varname, &value);
         value
     }
 
@@ -148,6 +148,35 @@ impl Interpreter {
 
                 result
             },
+            Expr::For(control_var, start, stop, step, stmts) => {
+                let mut result = Value::None;
+
+                let start = self.evaluate_expression(start);
+                let stop = self.evaluate_expression(stop);
+                let step = self.evaluate_expression(step);
+
+                self.set_var(control_var, &start);
+
+                if start <= stop {
+                    while self.get_var(control_var).expect("control variable not found") <= stop {
+                        for i in 0..stmts.len() {
+                            self.interpret_single(&stmts[i]);
+                        }
+
+                        self.set_var(control_var, &(self.get_var(control_var).expect("control variable not found") + step.clone()));
+                    }
+                } else {
+                    while self.get_var(control_var).expect("control variable not found") >= stop {
+                        for i in 0..stmts.len() {
+                            self.interpret_single(&stmts[i]);
+                        }
+
+                        self.set_var(control_var, &(self.get_var(control_var).expect("control variable not found") + step.clone()));
+                    }
+                }
+
+                result
+            }
             Expr::Call(func_name, exprs) => {
                 // get the function statement body
                 // create a new enviroment and append it to the env stack
@@ -237,15 +266,15 @@ impl Interpreter {
         self.envs.last().unwrap().resolve(varname)
     }
 
-    fn set_var(&mut self, varname: &String, value: Value) {
+    fn set_var(&mut self, varname: &String, value: &Value) {
         if self.get_var(varname).is_some() {
             self.envs
                 .last_mut()
                 .unwrap()
-                .assign_var(varname, value)
+                .assign_var(varname, value.clone())
                 .unwrap();
         } else {
-            self.envs.last_mut().unwrap().set_var(varname, value);
+            self.envs.last_mut().unwrap().set_var(varname, value.clone());
         }
     }
 }

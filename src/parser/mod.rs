@@ -67,6 +67,8 @@ impl Parser {
 
                             keyword if keyword == "enquanto" => self.parse_expr_stmt(),
 
+                            keyword if keyword == "para" => self.parse_expr_stmt(),
+
                             keyword if keyword == "imprima" => self.parse_expr_stmt(),
 
                             keyword if keyword == "escreva" => self.parse_expr_stmt(),
@@ -152,6 +154,30 @@ impl Parser {
                 let stmts = self.parse_block_until_keyword(&["fim"])?;
                 self.expect(Token::Keyword("fim".to_string()))?;
                 Expr::While(Box::new(cond), stmts)
+            }
+
+            Token::Keyword(keyword) if keyword == "para" => {
+                let control_var = self.next().unwrap();
+
+                if let Token::Identifier(control_var) = control_var.clone() {
+                    self.expect(Token::Keyword("de".to_string()))?;
+                    let start = self.parse_expr(0)?;
+                    self.expect(Token::Keyword("até".to_string()))?;
+                    let end = self.parse_expr(0)?;
+                    let mut step = Expr::Literal(Value::Integer(1));
+                    if self.peek() == Some(&Token::Keyword("para".to_string())) {
+                        self.expect(Token::Keyword("para".to_string()))?;
+                        step = self.parse_expr(0)?;
+                    }
+
+                    self.expect(Token::Keyword("faça".to_string()))?;
+                    let stmts = self.parse_block_until_keyword(&["fim"])?;
+                    self.expect(Token::Keyword("fim".to_string()))?;
+
+                    Expr::For(control_var.clone(), Box::new(start), Box::new(end), Box::new(step), stmts)
+                } else {
+                    return Err(ParseError::UnexpectedToken(control_var.clone()))
+                }
             }
 
             Token::Keyword(keyword) => {

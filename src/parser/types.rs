@@ -7,6 +7,7 @@ pub enum Expr {
     Unary(UnaryOp, Box<Expr>),
     Ternary(Box<Expr>, Vec<Stmt>, Vec<Stmt>),
     While(Box<Expr>, Vec<Stmt>),
+    For(String, Box<Expr>, Box<Expr>, Box<Expr>, Vec<Stmt>),
     Call(String, Vec<Expr>),
     Lambda(Vec<String>, Box<Expr>), // argument names, expression
     List(Vec<Expr>),
@@ -115,6 +116,9 @@ impl std::fmt::Debug for Expr {
             }
             Expr::While(condition, stmts) => {
                 write!(f, "{condition:?} {stmts:?}")
+            }
+            Expr::For(control_var, start, end, step, stmts) => {
+                write!(f, "{control_var} {start:?} {end:?} {step:?} {stmts:?}")
             }
             Expr::Call(_, _exprs) => todo!(),
             Expr::Lambda(_items, _expr) => todo!(),
