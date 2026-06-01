@@ -263,7 +263,7 @@ impl Trie {
 
     fn contains_bytes(&self, text: &[u8]) -> bool {
         if text.is_empty() {
-            return true;
+            return self.is_leaf;
         } else if self.is_leaf && !text.is_empty() {
             return false;
         } else if let Some(child) = self.children.get(&text[0]) {
