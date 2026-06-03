@@ -239,7 +239,7 @@ impl Trie {
     pub fn new() -> Trie {
         Trie {
             children: HashMap::new(),
-            is_leaf: true,
+            is_leaf: false,
         }
     }
 
@@ -250,10 +250,11 @@ impl Trie {
     fn insert_bytes(&mut self, text: &[u8]) {
         if !text.is_empty() {
             self.children.entry(text[0]).or_default();
-            self.is_leaf = false;
 
             let child = self.children.get_mut(&text[0]).unwrap();
             child.insert_bytes(&text[1..text.len()]);
+        } else {
+            self.is_leaf = true;
         }
     }
 
@@ -264,8 +265,6 @@ impl Trie {
     fn contains_bytes(&self, text: &[u8]) -> bool {
         if text.is_empty() {
             return self.is_leaf;
-        } else if self.is_leaf && !text.is_empty() {
-            return false;
         } else if let Some(child) = self.children.get(&text[0]) {
             return child.contains_bytes(&text[1..text.len()]);
         };
