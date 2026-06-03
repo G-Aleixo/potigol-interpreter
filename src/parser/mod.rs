@@ -202,6 +202,10 @@ impl Parser {
                 Token::ExprEnd => {
                     break
                 }
+                Token::Identifier(_) => {
+                    // expression parsing should be done
+                    break
+                }
                 tok => return Err(ParseError::UnexpectedToken(tok.clone())),
             };
 

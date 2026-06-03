@@ -108,12 +108,23 @@ impl Interpreter {
         Value::None
     }
 
-    fn evaluate_const_assignment(&mut self, _variables: &Expr, _expr: &Expr) -> Value {
-        todo!("Const assignment not implemented");
+    fn evaluate_const_assignment(&mut self, variables: &Expr, expr: &Expr) -> Value {
+        let value = self.evaluate_expression(expr); // consistency
+        //TODO: handle multiple targets
+        if let Expr::Variable(varname) = variables {
+            if self.get_var(varname).is_some() {
+                panic!("cannot assign new value {value:?} to variable {varname}");
+            }
+            self.set_var(varname, &value);
+        } else {
+            panic!("invalid var assignment target {:?}", variables);
+        }
+        value
     }
 
     fn evaluate_var_assignment(&mut self, variables: &Expr, expr: &Expr) -> Value {
         let value = self.evaluate_expression(expr);
+        //TODO: handle multiple targets
         if let Expr::Variable(varname) = variables {
             self.set_var(varname, &value);
         }

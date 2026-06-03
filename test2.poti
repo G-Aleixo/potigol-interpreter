@@ -1,7 +1,9 @@
+texto = leia_texto
+
 var x := 0
 
 enquanto x < 10 faça
-  escreva "ola mundo :)"
+  escreva "ola mundo :) {texto}"
   var x := x + 1
 fim
 
