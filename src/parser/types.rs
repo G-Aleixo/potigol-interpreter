@@ -16,13 +16,15 @@ pub enum Expr {
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
-    ConstAssignment(String, Expr),
-    VarAssignment(String, Expr),
+    ConstAssignment(Expr),
+    VarAssignment(Expr),
     ExprStmt(Expr),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BinOp {
+    ConstAssignment,
+    VarAssignment,
     Plus,
     Minus,
     Mult,
@@ -67,6 +69,8 @@ pub enum StringPart {
 impl From<&String> for BinOp {
     fn from(value: &String) -> Self {
         match value.as_ref() {
+            "=" => Self::ConstAssignment,
+            ":=" => Self::VarAssignment,
             "+" => Self::Plus,
             "-" => Self::Minus,
             "*" => Self::Mult,
@@ -141,6 +145,8 @@ impl std::fmt::Display for Value {
 impl std::fmt::Display for BinOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            BinOp::ConstAssignment => write!(f, "="),
+            BinOp::VarAssignment => write!(f, ":="),
             BinOp::Plus => write!(f, "+"),
             BinOp::Minus => write!(f, "-"),
             BinOp::Mult => write!(f, "*"),

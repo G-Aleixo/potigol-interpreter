@@ -44,24 +44,13 @@ impl Parser {
                             keyword if keyword == "var" => {
                                 self.expect(Token::Keyword("var".to_string()))?;
 
-                                let token = self.next().unwrap();
-                                if let Token::Identifier(ident) = token {
-                                    let name = ident.clone();
+                                let token = self.peek().unwrap();
+                                if let Token::Identifier(_) = token {
+                                    let expr = self.parse_expr(0)?;
 
-                                    self.expect(Token::Operation(":=".to_string()))?;
-                                    let value = self.parse_expr(0)?;
-                                    // if !self.is_eot() {
-                                    //     //TODO: really fix this, check for the end of expression correctly
-                                    //     if let Err(_) = self.expect(Token::NewLine) {
-                                    //         self.expect(Token::Keyword("var".to_string())).unwrap();
-                                    //     }
-                                    // }
-
-                                    return Ok(Stmt::VarAssignment(name, value));
+                                    return Ok(Stmt::VarAssignment(expr));
                                 };
-                                Err(ParseError::UnexpectedToken(
-                                    self.peek().unwrap_or(&Token::Unknown('~')).clone(),
-                                ))
+                                Err(ParseError::UnexpectedToken(token.clone()))
                             }
                             keyword if keyword == "se" => self.parse_expr_stmt(),
 
@@ -341,25 +330,26 @@ impl Parser {
 
 fn infix_binding_power(op: &str) -> Option<(u8, u8)> {
     Some(match op {
-        "ou" => (1, 2),
-        "e" => (3, 4),
-        // "não"  => ((), 5)
-        "==" | "<>" | ">" | ">=" | "<" | "<=" => (7, 8),
-        "+" | "-" => (9, 10),
-        "div" | "mod" | "*" | "/" => (11, 12),
-        // unary "+" "-" => ((), 13)
-        "^" => (16, 15),
-        // index "[" => (17, ())
-        "." => (20, 19),
+        ":=" | "=" => (0, 1),
+        "ou" => (3, 4),
+        "e" => (5, 6),
+        // "não"  => ((), 7)
+        "==" | "<>" | ">" | ">=" | "<" | "<=" => (9, 10),
+        "+" | "-" => (11, 12),
+        "div" | "mod" | "*" | "/" => (13, 14),
+        // unary "+" "-" => ((), 15)
+        "^" => (18, 17),
+        // index "[" => (19, ())
+        "." => (22, 21),
         _ => return None,
     })
 }
 
 fn prefix_binding_power(op: &str) -> ((), u8) {
     match op {
-        "imprima" | "escreva" => ((), 0),
-        "não" => ((), 5),
-        "+" | "-" => ((), 13),
+        "imprima" | "escreva" => ((), 2),
+        "não" => ((), 7),
+        "+" | "-" => ((), 15),
 
         op => panic!("Invalid op {op:?}"),
     }
@@ -367,7 +357,7 @@ fn prefix_binding_power(op: &str) -> ((), u8) {
 
 fn postfix_binding_power(op: &str) -> Option<(u8, ())> {
     Some(match op {
-        "[" => (17, ()),
+        "[" => (19, ()),
         _ => return None,
     })
 }

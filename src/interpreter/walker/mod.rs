@@ -64,8 +64,30 @@ impl Interpreter {
 
     pub fn interpret_single(&mut self, statement: &Stmt) -> Value {
         match statement {
-            Stmt::ConstAssignment(varname, expr) => self.evaluate_const_assignment(varname, expr),
-            Stmt::VarAssignment(varname, expr) => self.evaluate_var_assignment(varname, expr),
+            Stmt::ConstAssignment(expr) => match expr {
+                Expr::Binary(expr1, binop, expr2) if *binop == BinOp::ConstAssignment => {
+                    self.evaluate_const_assignment(expr1, expr2)
+                }
+                Expr::Binary(_, binop, _) => {
+                    panic!("const assignment had invalid operation {binop}")
+                }
+                _ => {
+                    panic!("const assignment was not a binary expression")
+                }
+                
+            }
+            Stmt::VarAssignment(expr) => match expr {
+                Expr::Binary(expr1, binop, expr2) if *binop == BinOp::VarAssignment => {
+                    self.evaluate_var_assignment(expr1, expr2)
+                }
+                Expr::Binary(_, binop, _) => {
+                    panic!("var assignment had invalid operation {binop}")
+                }
+                _ => {
+                    panic!("var assignment was not a binary expression")
+                }
+                
+            },
             Stmt::ExprStmt(expr) => self.evaluate_expr_stmt(expr),
         }
     }
@@ -86,13 +108,18 @@ impl Interpreter {
         Value::None
     }
 
-    fn evaluate_const_assignment(&mut self, _varname: &String, _expr: &Expr) -> Value {
+    fn evaluate_const_assignment(&mut self, _variables: &Expr, _expr: &Expr) -> Value {
         todo!("Const assignment not implemented");
     }
 
-    fn evaluate_var_assignment(&mut self, varname: &String, expr: &Expr) -> Value {
+    fn evaluate_var_assignment(&mut self, variables: &Expr, expr: &Expr) -> Value {
         let value = self.evaluate_expression(expr);
-        self.set_var(varname, &value);
+        if let Expr::Variable(varname) = variables {
+            self.set_var(varname, &value);
+        }
+        else {
+            panic!("invalid var assignment target {:?}", variables);
+        }
         value
     }
 
@@ -203,6 +230,8 @@ impl Interpreter {
 
     fn evaluate_bin_op(&mut self, expr1: &Expr, op: &BinOp, expr2: &Expr) -> Value {
         match op {
+            BinOp::ConstAssignment => self.evaluate_const_assignment(expr1, expr2),
+            BinOp::VarAssignment => self.evaluate_var_assignment(expr1, expr2),
             BinOp::Plus => self.evaluate_expression(expr1) + self.evaluate_expression(expr2),
             BinOp::Minus => self.evaluate_expression(expr1) - self.evaluate_expression(expr2),
             BinOp::Mult => self.evaluate_expression(expr1) * self.evaluate_expression(expr2),

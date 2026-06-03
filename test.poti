@@ -14,14 +14,16 @@ var resultado := 0
 
 escreva "calculando resultado..."
 
+var resultado := 0
+
 se op == "+" então
-  var resultado := num1 + num2
+  resultado := num1 + num2
 senãose op == "-" então
-  var resultado := num1 - num2
+  resultado := num1 - num2
 senãose op == "*" então
-  var resultado := num1 * num2
+  resultado := num1 * num2
 senãose op == "/" então
-  var resultado := num1 / num2
+  resultado := num1 / num2
 fim
 
 
