@@ -10,11 +10,9 @@ imprima "Qual a operação? "
 
 var op := leia_texto
 
-var resultado := 0
+var resultado := 0.0
 
 escreva "calculando resultado..."
-
-var resultado := 0
 
 se op == "+" então
   resultado := num1 + num2

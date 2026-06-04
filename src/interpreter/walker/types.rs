@@ -5,22 +5,17 @@ use crate::{parser::{self, Expr}};
 #[derive(Clone)]
 pub struct Enviroment {
     parent: Option<Rc<RefCell<Enviroment>>>,
-    const_vars: HashMap<String, Value>,
-    vars: HashMap<String, Value>,
+    vars: HashMap<String, ValueInfo>,
     overrides: HashMap<String, fn(&Enviroment) -> Value>
 }
 
 impl Enviroment {
-    pub fn resolve(&self, varname: &String) -> Option<Value> {
+    pub fn resolve(&self, varname: &String) -> Option<ValueInfo> {
         // Check overrides
         if let Some(func) = self.overrides.get(varname) {
-            return Some(func(self));
+            return Some(ValueInfo::new(func(self), TypeInfo::new(true)));
         }
-        // Check constants
-        if let Some(value) = self.const_vars.get(varname) {
-            return Some(value.clone());
-        }
-        // Check mutable vars
+        // Check vars
         if let Some(value) = self.vars.get(varname) {
             return Some(value.clone());
         }
@@ -31,19 +26,30 @@ impl Enviroment {
         None
     }
 
-    pub fn set_var(&mut self, varname: &String, value: Value) {
+    pub fn is_const(&self, varname: &String) -> bool {
+        *self.vars.get(varname).and_then(|value| Some(value.type_info().is_const())).unwrap_or(&false)
+    }
+
+    // x := ...
+    pub fn set_var(&mut self, varname: &String, value: ValueInfo) {
+        if self.vars.get(varname).and_then(|value| Some(value.type_info().is_const())) == Some(&true) {
+            panic!("cannot set constant variable value twice")
+        } else if self.vars.get(varname).is_none() && !*value.type_info().is_const() {
+            panic!("cannot set value {value:?} to undeclared variable {varname}")
+        } else if *value.type_info().is_const() {
+
+        } else if !self.vars.get(varname).unwrap().value().same_type(value.value()) {
+            panic!("attempted to insert value {:?} to variable {varname} with different type", value.value())
+        }
         self.vars.insert(varname.to_string(), value);
     }
 
-    pub fn assign_var(&mut self, varname: &String, value: Value) -> Result<(), String> {
+    // var x := ...
+    pub fn assign_var(&mut self, varname: &String, value: ValueInfo) {
         if self.vars.contains_key(varname) {
-            self.vars.insert(varname.to_string(), value);
-            Ok(())
-        } else if let Some(parent) = &self.parent {
-            parent.borrow_mut().assign_var(varname, value)?;
-            Ok(())
+            panic!("tried to assign {:?} to already existing variable {varname}", value.value());
         } else {
-            Err(format!("Undeclared variable {}", varname))
+            self.vars.insert(varname.clone(), value);
         }
     }
 
@@ -59,7 +65,6 @@ impl Enviroment {
     pub fn empty() -> Enviroment {
         Enviroment {
             parent: None,
-            const_vars: HashMap::new(),
             vars: HashMap::new(),
             overrides: HashMap::new(),
         }
@@ -68,10 +73,49 @@ impl Enviroment {
     pub fn new_child(&self) -> Enviroment {
         Enviroment {
             parent: Some(Rc::new(RefCell::new(self.clone()))),
-            const_vars: HashMap::new(),
             vars: HashMap::new(),
             overrides: HashMap::new(),
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ValueInfo {
+    value: Value,
+    type_info: TypeInfo
+}
+
+#[derive(Clone, Debug)]
+pub struct TypeInfo {
+    is_const: bool
+}
+
+impl ValueInfo {
+    pub fn new(value: Value, type_info: TypeInfo) -> Self {
+        ValueInfo {
+            value,
+            type_info,
+        }
+    }
+
+    pub fn value(&self) -> &Value {
+        &self.value
+    }
+
+    pub fn type_info(&self) -> &TypeInfo {
+        &self.type_info
+    }
+}
+
+impl TypeInfo {
+    pub fn new(is_const: bool) -> Self {
+        TypeInfo {
+            is_const,
+        }
+    }
+
+    pub fn is_const(&self) -> &bool {
+        &self.is_const
     }
 }
 
@@ -105,6 +149,30 @@ impl Value {
             (Value::Float(num1), Value::Float(num2)) => Value::Float(num1.powf(*num2)),
             (Value::Float(_), _) => panic!("Cannot pow float {self:?} with {other:?}"),
             _ => panic!("Cannot pow {self:?} with {other:?}"),
+        }
+    }
+
+    pub fn same_type(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Value::Integer(_), Value::Integer(_)) => true,
+            (Value::Float(_), Value::Float(_)) => true,
+            (Value::String(_), Value::String(_)) => true,
+            (Value::Boolean(_), Value::Boolean(_)) => true,
+            (Value::Lambda(_, _), Value::Lambda(_, _)) => true,
+            (Value::List(values1), Value::List(values2)) => {
+                // lists have the same types for all indices
+                if values1.len() == 0 || values2.len() == 0 {
+                    true
+                } else {
+                    values1[0].same_type(&values2[0])
+                }
+            },
+            (Value::Tuple(values1), Value::Tuple(values2)) => {
+                
+                return values1.iter().zip(values2.iter()).all(|(v1, v2)| v1.same_type(v2));
+            },
+            (Value::None, Value::None) => true,
+            _ => false
         }
     }
 }

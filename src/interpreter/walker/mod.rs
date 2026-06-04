@@ -66,7 +66,7 @@ impl Interpreter {
         match statement {
             Stmt::ConstAssignment(expr) => match expr {
                 Expr::Binary(expr1, binop, expr2) if *binop == BinOp::ConstAssignment => {
-                    self.evaluate_const_assignment(expr1, expr2)
+                    self.evaluate_assignment(expr1, expr2, TypeInfo::new(true))
                 }
                 Expr::Binary(_, binop, _) => {
                     panic!("const assignment had invalid operation {binop}")
@@ -78,7 +78,7 @@ impl Interpreter {
             }
             Stmt::VarAssignment(expr) => match expr {
                 Expr::Binary(expr1, binop, expr2) if *binop == BinOp::VarAssignment => {
-                    self.evaluate_var_assignment(expr1, expr2)
+                    self.evaluate_assignment(expr1, expr2, TypeInfo::new(false))
                 }
                 Expr::Binary(_, binop, _) => {
                     panic!("var assignment had invalid operation {binop}")
@@ -108,25 +108,11 @@ impl Interpreter {
         Value::None
     }
 
-    fn evaluate_const_assignment(&mut self, variables: &Expr, expr: &Expr) -> Value {
-        let value = self.evaluate_expression(expr); // consistency
-        //TODO: handle multiple targets
-        if let Expr::Variable(varname) = variables {
-            if self.get_var(varname).is_some() {
-                panic!("cannot assign new value {value:?} to variable {varname}");
-            }
-            self.set_var(varname, &value);
-        } else {
-            panic!("invalid var assignment target {:?}", variables);
-        }
-        value
-    }
-
-    fn evaluate_var_assignment(&mut self, variables: &Expr, expr: &Expr) -> Value {
+    fn evaluate_assignment(&mut self, variables: &Expr, expr: &Expr, type_info: TypeInfo) -> Value {
         let value = self.evaluate_expression(expr);
         //TODO: handle multiple targets
         if let Expr::Variable(varname) = variables {
-            self.set_var(varname, &value);
+            self.set_var(varname, &ValueInfo::new(value.clone(), type_info));
         }
         else {
             panic!("invalid var assignment target {:?}", variables);
@@ -146,6 +132,7 @@ impl Interpreter {
             Expr::Variable(varname) => self
                 .get_var(varname)
                 .unwrap_or_else(|| panic!("Variable {varname} not defined"))
+                .value()
                 .clone(),
             Expr::Binary(expr1, bin_op, expr2) => self.evaluate_bin_op(expr1, bin_op, expr2),
             Expr::Unary(unary_op, expr) => self.evaluate_unary_op(expr, unary_op),
@@ -193,23 +180,27 @@ impl Interpreter {
                 let stop = self.evaluate_expression(stop);
                 let step = self.evaluate_expression(step);
 
-                self.set_var(control_var, &start);
+                self.set_var(control_var, &ValueInfo::new(start.clone(), TypeInfo::new(false)));
 
                 if start <= stop {
-                    while self.get_var(control_var).expect("control variable not found") <= stop {
+                    while *self.get_var(control_var).expect("control variable not found").value() <= stop {
                         for stmt in stmts {
                             self.interpret_single(stmt);
                         }
 
-                        self.set_var(control_var, &(self.get_var(control_var).expect("control variable not found") + step.clone()));
+                        self.set_var(control_var, &ValueInfo::new(
+                            self.get_var(control_var).expect("control variable not found").value().clone() + step.clone(),
+                            TypeInfo::new(false)));
                     }
                 } else {
-                    while self.get_var(control_var).expect("control variable not found") >= stop {
+                    while *self.get_var(control_var).expect("control variable not found").value() >= stop {
                         for stmt in stmts {
                             self.interpret_single(stmt);
                         }
 
-                        self.set_var(control_var, &(self.get_var(control_var).expect("control variable not found") + step.clone()));
+                        self.set_var(control_var, &ValueInfo::new(
+                            self.get_var(control_var).expect("control variable not found").value().clone() + step.clone(),
+                            TypeInfo::new(false)));
                     }
                 }
 
@@ -241,8 +232,8 @@ impl Interpreter {
 
     fn evaluate_bin_op(&mut self, expr1: &Expr, op: &BinOp, expr2: &Expr) -> Value {
         match op {
-            BinOp::ConstAssignment => self.evaluate_const_assignment(expr1, expr2),
-            BinOp::VarAssignment => self.evaluate_var_assignment(expr1, expr2),
+            BinOp::ConstAssignment => self.evaluate_assignment(expr1, expr2, TypeInfo::new(true)),
+            BinOp::VarAssignment => self.evaluate_assignment(expr1, expr2, TypeInfo::new(false)),
             BinOp::Plus => self.evaluate_expression(expr1) + self.evaluate_expression(expr2),
             BinOp::Minus => self.evaluate_expression(expr1) - self.evaluate_expression(expr2),
             BinOp::Mult => self.evaluate_expression(expr1) * self.evaluate_expression(expr2),
@@ -302,19 +293,18 @@ impl Interpreter {
         Value::String(string)
     }
 
-    pub fn get_var(&self, varname: &String) -> Option<Value> {
+    pub fn get_var(&self, varname: &String) -> Option<ValueInfo> {
         self.envs.last().unwrap().resolve(varname)
     }
 
-    fn set_var(&mut self, varname: &String, value: &Value) {
+    fn set_var(&mut self, varname: &String, value: &ValueInfo) {
         if self.get_var(varname).is_some() {
             self.envs
                 .last_mut()
                 .unwrap()
-                .assign_var(varname, value.clone())
-                .unwrap();
+                .set_var(varname, value.clone());
         } else {
-            self.envs.last_mut().unwrap().set_var(varname, value.clone());
+            self.envs.last_mut().unwrap().assign_var(varname, value.clone());
         }
     }
 }
