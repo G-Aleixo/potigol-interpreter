@@ -105,6 +105,12 @@ impl Parser {
                 lhs
             }
 
+            Token::BlockDelimeter(block, false) if block == "[" => {
+                let lhs = Expr::List(self.parse_comma_separated()?);
+                self.expect(Token::BlockDelimeter("]".to_string(), true))?;
+                lhs
+            }
+
             Token::Keyword(keyword) if keyword == "se" => {
                 let cond = self.parse_expr(0)?;
                 self.expect(Token::Keyword("então".to_string()))?;
@@ -193,6 +199,7 @@ impl Parser {
             let op = match tok {
                 Token::Period => ".".to_string(),
                 Token::Keyword(keyword) => keyword.clone(),
+                Token::Comma => break,
                 Token::Operation(op) => op.clone(),
                 Token::BlockDelimeter(block, _) => block.clone(),
                 Token::NewLine => {
@@ -297,6 +304,18 @@ impl Parser {
             stmts.push(self.parse_stmt()?);
         }
         Ok(stmts)
+    }
+
+    fn parse_comma_separated(&mut self) -> Result<Vec<Expr>, ParseError> {
+        let mut exprs = Vec::new();
+        while let Some(tok) = self.peek() {
+            if let Token::BlockDelimeter(_, is_close) = tok && *is_close {
+                break
+            };
+            exprs.push(self.parse_expr(0)?);
+        }
+
+        Ok(exprs)
     }
 
     fn parse_fstring(&mut self) -> Result<Expr, ParseError> {

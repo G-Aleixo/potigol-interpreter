@@ -10,6 +10,7 @@ pub enum Expr {
     For(String, Box<Expr>, Box<Expr>, Box<Expr>, Vec<Stmt>),
     Call(String, Vec<Expr>),
     Lambda(Vec<String>, Box<Expr>), // argument names, expression
+    CommaSeparated(Vec<Expr>),
     List(Vec<Expr>),
     Tuple(Vec<Expr>),
 }
@@ -126,6 +127,7 @@ impl std::fmt::Debug for Expr {
             }
             Expr::Call(_, _exprs) => todo!(),
             Expr::Lambda(_items, _expr) => todo!(),
+            Expr::CommaSeparated(exprs) => todo!(),
             Expr::List(_exprs) => todo!(),
             Expr::Tuple(_exprs) => todo!(),
         }

@@ -1,0 +1,5 @@
+var z = [2, 3]
+
+a = 3
+
+imprima "{a} {x} {y} {z}"

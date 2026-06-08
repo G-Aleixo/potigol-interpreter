@@ -215,6 +215,7 @@ impl Interpreter {
             }
             // copy over to the Value format
             Expr::Lambda(items, expr) => Value::Lambda(items.to_vec(), expr.clone()),
+            Expr::CommaSeparated(_) => todo!(),
             Expr::List(exprs) => Value::List(
                 exprs
                     .iter()
