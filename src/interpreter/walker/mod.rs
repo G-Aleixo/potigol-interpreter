@@ -109,6 +109,7 @@ impl Interpreter {
     }
 
     fn evaluate_assignment(&mut self, variables: &Expr, expr: &Expr, type_info: TypeInfo) -> Value {
+        // verify targets are all variables
         let value = self.evaluate_expression(expr);
         //TODO: handle multiple targets
         if let Expr::Variable(varname) = variables {
@@ -232,6 +233,7 @@ impl Interpreter {
 
     fn evaluate_bin_op(&mut self, expr1: &Expr, op: &BinOp, expr2: &Expr) -> Value {
         match op {
+            BinOp::Comma => todo!(),
             BinOp::ConstAssignment => self.evaluate_assignment(expr1, expr2, TypeInfo::new(true)),
             BinOp::VarAssignment => self.evaluate_assignment(expr1, expr2, TypeInfo::new(false)),
             BinOp::Plus => self.evaluate_expression(expr1) + self.evaluate_expression(expr2),

@@ -42,6 +42,7 @@ pub enum BinOp {
     Less,
     LessOrEqual,
     Index,
+    Comma,
 }
 
 #[derive(Debug, Clone)]
@@ -88,6 +89,7 @@ impl From<&String> for BinOp {
             "<" => Self::Less,
             "<=" => Self::LessOrEqual,
             "[" => Self::Index,
+            "," => Self::Comma,
             v => panic!("Invalid infix operator {v}"),
         }
     }
@@ -164,6 +166,7 @@ impl std::fmt::Display for BinOp {
             BinOp::Less => write!(f, "<"),
             BinOp::LessOrEqual => write!(f, "<="),
             BinOp::Index => write!(f, "["),
+            BinOp::Comma => write!(f, ","),
         }
     }
 }
