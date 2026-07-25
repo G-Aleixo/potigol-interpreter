@@ -1,340 +1,202 @@
 pub mod types;
 
-use std::collections::HashMap;
+use winnow::{Parser, Result, ascii::{alphanumeric1, dec_int, }, combinator::{alt, delimited, not, peek, repeat}, error::ContextError, token::{any, one_of, take_till, take_while}};
 
-use crate::lexer::Token::StringEnd;
 pub use crate::lexer::types::*;
 
-pub fn tokenize(code: &str) -> Result<Vec<Token>, &'static str> {
-    let mut tokens = vec![];
-    let keywords = Trie::keywords();
-    let types = Trie::types();
-    let operators = Trie::operators();
+fn block_delimeter<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+    one_of(['(', ')', '[', ']', '{', '}'])
+        .map(|c| Token::BlockDelimeter(c, matches!(c, ')' | ']' | '}')))
+        .parse_next(input)
+}
 
-    let chars: Vec<_> = code.chars().collect();
-    let mut i = 0;
+fn operator<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+    alt((
+        alt(("+", "-", "*", "/", "^")),
+        alt((">=", ">", "<=", "<>", "<")),
+        alt(("==", "=>", "=", ":=", "::")),
+        alt(("div", "mod"))
+    ))
+        .map(|op| Token::Operation(op))
+        .parse_next(input)
+}
 
-    while i < chars.len() {
-        match chars[i] {
-            // the unary - and + will be handled later down
-            '+' => tokens.push(Token::Operation(String::from("+"))),
-            '-' => tokens.push(Token::Operation(String::from("-"))),
-            '*' => tokens.push(Token::Operation(String::from("*"))),
-            '^' => tokens.push(Token::Operation(String::from("^"))),
-            '/' => tokens.push(Token::Operation(String::from("/"))),
-            '(' => tokens.push(Token::BlockDelimeter(String::from("("), false)),
-            ')' => tokens.push(Token::BlockDelimeter(String::from(")"), true)),
-            '[' => tokens.push(Token::BlockDelimeter(String::from("["), false)),
-            ']' => tokens.push(Token::BlockDelimeter(String::from("]"), true)),
-            '{' => tokens.push(Token::BlockDelimeter(String::from("{"), false)),
-            '}' => tokens.push(Token::BlockDelimeter(String::from("}"), true)),
-            c if c.is_ascii_digit() => {
-                let mut num = String::new();
-                let mut has_dot = false;
+fn integer<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+    (
+        dec_int,
+        not(one_of(('.', 'e', 'E')))
+    )
+    .map(|(n, _)| Token::Integer(n))
+    .parse_next(input)
+}
 
-                while i < chars.len() && (chars[i].is_ascii_digit() || chars[i] == '.') {
-                    if chars[i] == '.' && has_dot {
-                        break;
-                    }
-                    if chars[i] == '.' {
-                        has_dot = true;
-                    }
+fn float<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+    winnow::ascii::float.map(|f| Token::Float(f)).parse_next(input)
+}
 
-                    num.push(chars[i]);
-                    i += 1;
-                }
-                if let Ok(int) = num.parse() {
-                    tokens.push(Token::Integer(int));
-                } else if let Ok(float) = num.parse() {
-                    tokens.push(Token::Float(float));
-                } else {
-                    return Err("Could not parse num as any number type");
-                }
+fn bool<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+    alt(("verdadeiro", "falso"))
+    .map(|c| c == "verdadeiro")
+    .map(|b| Token::Boolean(b))
+    .parse_next(input)
+}
 
-                continue;
-            }
-            c if c.is_alphabetic() => {
-                let mut ident = String::new();
-                while i < chars.len()
-                    && (chars[i].is_alphanumeric() || matches!(chars[i], '_' | '-'))
-                {
-                    ident.push(chars[i]);
-                    i += 1;
-                }
+fn literal<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+    alt((
+        '\n'.map(|_| Token::NewLine),
+        ':'.map(|_| Token::Colon),
+        ','.map(|_| Token::Comma),
+        '.'.map(|_| Token::Period)
+    )).parse_next(input)
+}
 
-                if keywords.contains(&ident) {
-                    tokens.push(Token::Keyword(ident))
-                } else if types.contains(&ident) {
-                    tokens.push(Token::Type(ident))
-                } else if operators.contains(&ident) {
-                    tokens.push(Token::Operation(ident))
-                } else {
-                    tokens.push(Token::Identifier(ident));
-                }
-                continue;
-            }
-            '"' => {
-                tokens.push(Token::StringStart);
-                i += 1;
-                let mut string = String::new();
-                while i < chars.len() {
-                    match chars[i] {
-                        '"' => {
-                            break
-                        }
-                        '{' => {
-                            if !string.is_empty() {
-                                tokens.push(Token::StringFragment(string.clone()));
-                                string.clear();
-                            }
-                            tokens.push(Token::ExprStart);
-                            i += 1;
-                            let mut level = 1;
-                            let mut inner = String::new();
+fn unknown<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+    any.map(|c| Token::Unknown(c)).parse_next(input)
+}
 
-                            while i < chars.len() && level != 0 {
-                                match chars[i] {
-                                    '{' => { level += 1 },
-                                    '}' => { level -= 1 },
-                                    _ => {},
-                                }
-                                inner.push(chars[i]);
-                                i += 1;
-                            }
+fn keyword<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+    dbg!(&input);
+    (alt((
+        alt(("escreva",
+        "imprima",
+        "var",
+        "em",
+        "ou",
+        "não", // ew, a tilde
+        "se")),
+        alt(("então",
+        "senãose",
+        "senao",
+        "fim",
+        "escolha",
+        "caso",
+        "para",
+        "de",
+        "até")),
+        "faça",
+        "passo",
+        "enquanto",
+        "e",
+        "retorne",
+        "tipo",
+        "gere",
+    )),
+    peek(not(alphanumeric1)))
+    .map(|(kw, _)| Token::Keyword(kw))
+    .parse_next(input)
+}
 
-                            let inner_tokens = tokenize(&inner[..inner.len()-1])?;
-                            tokens.extend(inner_tokens);
+// short for "parse type"
+// stupid type keyword
+fn ptype<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+    alt(("Inteiro",
+        "Real",
+        "Texto",
+        "Lógico",
+        "Caractere",
+        //"Tupla" is deduced in the parser
+        "Lista"
+    )).map(|t| Token::Type(t))
+    .parse_next(input)
+}
 
-                            tokens.push(Token::ExprEnd);
-                        }
-                        ch => {
-                            string.push(ch);
-                            i += 1;
-                        }
-                    }
-                }
+// ran after all the other functions that may get a string
+fn identifier<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+    (
+        one_of(|c: char| c.is_alphabetic() || c == '_'),
+        take_while(0.., |c: char| c.is_alphanumeric() || c == '_')
+    )
+    .take()
+    .map(|s| Token::Identifier(s))
+    .parse_next(input)
+}
 
-                if i == chars.len() && !string.ends_with('"') {
-                    return Err("Unexpected EOF");
-                }
+fn text<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+    println!("Retrieving text from \"{input}\"");
+    take_till(1.., ['{', '"'])
+    .map(|str| Token::StringFragment(str))
+    .parse_next(input)
+}
 
-                if !string.is_empty() {
-                    tokens.push(Token::StringFragment(string));
-                }
+fn interpolation<'s>(input: &mut &'s str) -> Result<Vec<Token<'s>>> {
+    println!("Retrieving interp from \"{input}\"");
+    let tokens: Vec<Vec<Token<'_>>> = delimited(
+        "{",
+        repeat(0.., token),
+        "}"
+    ).parse_next(input)?;
+    
+    let mut flattened: Vec<_> = tokens.iter().flatten().copied().collect();
 
-                tokens.push(StringEnd);
-            }
-            '\'' => {
-                i += 1;
-                let mut string = String::new();
-                while i < chars.len() && chars[i] != '\'' {
-                    string.push(chars[i]);
-                    i += 1;
-                }
-                if i == chars.len() && !string.ends_with('\'') {
-                    return Err("Unexpected EOF");
-                }
+    let mut ret = vec![Token::ExprStart];
+    
+    ret.append(&mut flattened);
+    ret.push(Token::ExprEnd);
 
-                tokens.push(Token::StringStart);
-                tokens.push(Token::StringFragment(string));
-                tokens.push(Token::StringEnd);
-            }
-            ':' => {
-                let tmp = i + 1;
-                if tmp < chars.len() {
-                    match chars[tmp] {
-                        '=' => {
-                            tokens.push(Token::Operation(String::from(":=")));
-                            i += 1
-                        }
-                        ':' => {
-                            tokens.push(Token::Operation(String::from("::")));
-                            i += 1
-                        }
-                        _ => tokens.push(Token::Colon),
-                    }
-                } else {
-                    tokens.push(Token::Colon);
-                }
-            }
-            '=' => {
-                let tmp = i + 1;
-                if tmp < chars.len() {
-                    match chars[tmp] {
-                        '=' => {
-                            tokens.push(Token::Operation(String::from("==")));
-                            i += 1
-                        }
-                        '>' => {
-                            tokens.push(Token::Operation(String::from("=>")));
-                            i += 1
-                        }
-                        _ => tokens.push(Token::Operation(String::from("="))),
-                    }
-                } else {
-                    tokens.push(Token::Operation(String::from("=")))
-                }
-            }
-            '<' => {
-                let tmp = i + 1;
-                if tmp < chars.len() {
-                    match chars[tmp] {
-                        '=' => {
-                            tokens.push(Token::Operation(String::from("<=")));
-                            i += 1
-                        }
-                        '>' => {
-                            tokens.push(Token::Operation(String::from("<>")));
-                            i += 1
-                        }
-                        _ => tokens.push(Token::Operation(String::from("<"))),
-                    }
-                } else {
-                    tokens.push(Token::Operation(String::from("<")))
-                }
-            }
-            '>' => {
-                let tmp = i + 1;
-                if tmp < chars.len() {
-                    match chars[tmp] {
-                        '=' => {
-                            tokens.push(Token::Operation(String::from(">=")));
-                            i += 1
-                        }
-                        _ => tokens.push(Token::Operation(String::from(">"))),
-                    }
-                } else {
-                    tokens.push(Token::Operation(String::from(">")))
-                }
-            }
-            '\n' => {
-                tokens.push(Token::NewLine);
-            }
-            ',' => {
-                tokens.push(Token::Comma);
-            }
-            '.' => {
-                tokens.push(Token::Period);
-            }
-            ' ' => {}
-            '\r' => {}
-            c => {
-                tokens.push(Token::Unknown(c));
-            }
-        }
+    Ok(ret)
+}
 
-        i += 1;
+fn string<'s>(input: &mut &'s str) -> Result<Vec<Token<'s>>> {
+    let mut string = vec![Token::StringStart];
+    
+    let parts: Vec<Vec<Token<'_>>> = delimited('"',
+    repeat(
+        0..,
+        alt((
+            text.map(|t| vec![t]),
+            interpolation
+        ))
+    ),
+    '"'
+    )
+    .parse_next(input)?;
+
+    let mut flattened: Vec<_> = parts.iter().flatten().copied().collect();
+
+    string.append(&mut flattened);
+    string.push(Token::StringEnd);
+
+    Ok(string)
+}
+
+fn token<'s>(input: &mut &'s str) -> Result<Vec<Token<'s>>> {
+    let tokens = alt((
+        alt((
+            operator,
+            integer,
+            float,
+            bool,
+            literal
+        )).map(|t| vec![t]),
+        alt((
+            keyword,
+            ptype,
+            operator,
+            identifier
+        )).map(|t| vec![t]),
+        string,
+        
+
+        block_delimeter.map(|t| vec![t]),
+        
+        winnow::ascii::multispace1.map(|_| vec![]),
+        unknown.map(|t| vec![t])
+    ))
+    .parse_next(input)?;
+
+    // } block delimiter should be handled by the string parser
+    if tokens.len() == 1 && matches!(tokens[0], Token::BlockDelimeter('}', true)) {
+        return Err(ContextError::new());
     }
 
     Ok(tokens)
 }
 
-#[derive(Debug)]
-pub struct Trie {
-    children: HashMap<u8, Trie>,
-    is_leaf: bool,
-}
+pub fn tokenize<'s>(input: &mut &'s str) -> Result<Vec<Token<'s>>> {
+    println!("call \"{input}\"");
+    let t: Vec<Vec<Token<'s>>> = repeat(.., token).parse_next(input)?;
 
-impl Trie {
-    pub fn new() -> Trie {
-        Trie {
-            children: HashMap::new(),
-            is_leaf: false,
-        }
-    }
+    let flattened: Vec<_> = t.iter().flatten().copied().collect();
 
-    pub fn insert(&mut self, text: &str) {
-        self.insert_bytes(text.as_bytes());
-    }
-
-    fn insert_bytes(&mut self, text: &[u8]) {
-        if !text.is_empty() {
-            self.children.entry(text[0]).or_default();
-
-            let child = self.children.get_mut(&text[0]).unwrap();
-            child.insert_bytes(&text[1..text.len()]);
-        } else {
-            self.is_leaf = true;
-        }
-    }
-
-    pub fn contains(&self, text: &str) -> bool {
-        self.contains_bytes(text.as_bytes())
-    }
-
-    fn contains_bytes(&self, text: &[u8]) -> bool {
-        if text.is_empty() {
-            return self.is_leaf;
-        } else if let Some(child) = self.children.get(&text[0]) {
-            return child.contains_bytes(&text[1..text.len()]);
-        };
-
-        false
-    }
-
-    fn keywords() -> Trie {
-        Trie::from(vec![
-            // these are loaded in as a "std lib"
-            // "leia_texto",
-            // "leia_inteiro",
-            // "leia_numero",
-            "escreva",
-            "imprima",
-            "var",
-            "falso",
-            "verdadeiro",
-            "e",
-            "ou",
-            "não", // ew, a tilde
-            "se",
-            "então",
-            "senão",
-            "senãose",
-            "fim",
-            "escolha",
-            "caso",
-            "para",
-            "de",
-            "até",
-            "faça",
-            "passo",
-            "em",
-            "enquanto",
-            "retorne",
-            "tipo",
-            "gere",
-        ])
-    }
-    fn types() -> Trie {
-        Trie::from(vec![
-            "Inteiro",
-            "Real",
-            "Texto",
-            "Lógico",
-            "Caractere",
-            //"Tupla" é deduzida no proximo passo da compilação
-            "Lista",
-        ])
-    }
-    fn operators() -> Trie {
-        Trie::from(vec!["div", "mod"])
-    }
-}
-
-impl Default for Trie {
-    fn default() -> Trie {
-        Trie::new()
-    }
-}
-
-impl From<Vec<&str>> for Trie {
-    fn from(value: Vec<&str>) -> Trie {
-        let mut trie = Trie::new();
-
-        for str in value {
-            trie.insert(str);
-        }
-
-        trie
-    }
+    Ok(flattened)
 }

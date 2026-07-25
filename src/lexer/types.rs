@@ -1,9 +1,9 @@
-#[derive(Debug, PartialEq, Clone)]
-pub enum Token {
-    Identifier(String),
-    Type(String),
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Token<'s> {
+    Identifier(&'s str),
+    Type(&'s str),
     StringStart,
-    StringFragment(String),
+    StringFragment(&'s str),
     ExprStart,
     ExprEnd,
     StringEnd,
@@ -16,7 +16,8 @@ pub enum Token {
     Period,
     Colon,
     Unknown(char),
-    Keyword(String),
-    Operation(String),
-    BlockDelimeter(String, bool),
+    Keyword(&'s str),
+    Operation(&'s str),
+    // the "fim" block delimeter is a keyword
+    BlockDelimeter(char, bool),
 }
