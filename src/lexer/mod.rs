@@ -1,16 +1,41 @@
 pub mod types;
 
-use winnow::{Parser, Result, ascii::{alphanumeric1, dec_int, }, combinator::{alt, delimited, not, peek, repeat}, error::ContextError, token::{any, one_of, take_till, take_while}};
+use winnow::{Parser, Result, Stateful, ascii::{alphanumeric1, dec_int, }, combinator::{alt, delimited, not, peek, repeat}, error::{ContextError, ParserError}, token::{any, one_of, take_till, take_while}};
 
 pub use crate::lexer::types::*;
 
-fn block_delimeter<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+#[derive(Debug)]
+pub struct State<'s> {
+    interp_level: &'s mut u32
+}
+
+impl<'s> State<'s> {
+    pub fn is_interpolating(&self) -> bool {
+        *self.interp_level > 0
+    }
+
+    pub fn increase_interp(&mut self) {
+        *self.interp_level += 1;
+    }
+
+    pub fn decrease_interp(&mut self) {
+        if *self.interp_level == 0 {
+            panic!("Tried to decrease interpolation level past 0!");
+        }
+        *self.interp_level -= 1;
+    }
+}
+
+type Stream<'is> = Stateful<&'is str, State<'is>>;
+
+
+fn block_delimeter<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
     one_of(['(', ')', '[', ']', '{', '}'])
         .map(|c| Token::BlockDelimeter(c, matches!(c, ')' | ']' | '}')))
         .parse_next(input)
 }
 
-fn operator<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+fn operator<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
     alt((
         alt(("+", "-", "*", "/", "^")),
         alt((">=", ">", "<=", "<>", "<")),
@@ -21,7 +46,7 @@ fn operator<'s>(input: &mut &'s str) -> Result<Token<'s>> {
         .parse_next(input)
 }
 
-fn integer<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+fn integer<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
     (
         dec_int,
         not(one_of(('.', 'e', 'E')))
@@ -30,18 +55,18 @@ fn integer<'s>(input: &mut &'s str) -> Result<Token<'s>> {
     .parse_next(input)
 }
 
-fn float<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+fn float<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
     winnow::ascii::float.map(|f| Token::Float(f)).parse_next(input)
 }
 
-fn bool<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+fn bool<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
     alt(("verdadeiro", "falso"))
     .map(|c| c == "verdadeiro")
     .map(|b| Token::Boolean(b))
     .parse_next(input)
 }
 
-fn literal<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+fn literal<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
     alt((
         '\n'.map(|_| Token::NewLine),
         ':'.map(|_| Token::Colon),
@@ -50,12 +75,11 @@ fn literal<'s>(input: &mut &'s str) -> Result<Token<'s>> {
     )).parse_next(input)
 }
 
-fn unknown<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+fn unknown<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
     any.map(|c| Token::Unknown(c)).parse_next(input)
 }
 
-fn keyword<'s>(input: &mut &'s str) -> Result<Token<'s>> {
-    dbg!(&input);
+fn keyword<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
     (alt((
         alt(("escreva",
         "imprima",
@@ -88,7 +112,7 @@ fn keyword<'s>(input: &mut &'s str) -> Result<Token<'s>> {
 
 // short for "parse type"
 // stupid type keyword
-fn ptype<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+fn ptype<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
     alt(("Inteiro",
         "Real",
         "Texto",
@@ -101,7 +125,7 @@ fn ptype<'s>(input: &mut &'s str) -> Result<Token<'s>> {
 }
 
 // ran after all the other functions that may get a string
-fn identifier<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+fn identifier<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
     (
         one_of(|c: char| c.is_alphabetic() || c == '_'),
         take_while(0.., |c: char| c.is_alphanumeric() || c == '_')
@@ -111,21 +135,28 @@ fn identifier<'s>(input: &mut &'s str) -> Result<Token<'s>> {
     .parse_next(input)
 }
 
-fn text<'s>(input: &mut &'s str) -> Result<Token<'s>> {
+fn text<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
     println!("Retrieving text from \"{input}\"");
     take_till(1.., ['{', '"'])
     .map(|str| Token::StringFragment(str))
     .parse_next(input)
 }
 
-fn interpolation<'s>(input: &mut &'s str) -> Result<Vec<Token<'s>>> {
+fn interpolation<'s>(input: &mut Stream<'s>) -> Result<Vec<Token<'s>>> {
     println!("Retrieving interp from \"{input}\"");
-    let tokens: Vec<Vec<Token<'_>>> = delimited(
+
+    input.state.increase_interp();
+
+    let tokens: Result<Vec<Vec<Token<'_>>>> = delimited(
         "{",
         repeat(0.., token),
         "}"
-    ).parse_next(input)?;
-    
+    ).parse_next(input);
+
+    input.state.decrease_interp();
+
+    let tokens = tokens?;
+
     let mut flattened: Vec<_> = tokens.iter().flatten().copied().collect();
 
     let mut ret = vec![Token::ExprStart];
@@ -136,7 +167,7 @@ fn interpolation<'s>(input: &mut &'s str) -> Result<Vec<Token<'s>>> {
     Ok(ret)
 }
 
-fn string<'s>(input: &mut &'s str) -> Result<Vec<Token<'s>>> {
+fn string<'s>(input: &mut Stream<'s>) -> Result<Vec<Token<'s>>> {
     let mut string = vec![Token::StringStart];
     
     let parts: Vec<Vec<Token<'_>>> = delimited('"',
@@ -159,7 +190,13 @@ fn string<'s>(input: &mut &'s str) -> Result<Vec<Token<'s>>> {
     Ok(string)
 }
 
-fn token<'s>(input: &mut &'s str) -> Result<Vec<Token<'s>>> {
+fn token<'s>(input: &mut Stream<'s>) -> Result<Vec<Token<'s>>> {
+    dbg!(&input);
+    if input.state.is_interpolating() {
+        not(peek('}'))
+        .verify(|_| true)
+        .parse_next(input)?;
+    }
     let tokens = alt((
         alt((
             operator,
@@ -184,15 +221,10 @@ fn token<'s>(input: &mut &'s str) -> Result<Vec<Token<'s>>> {
     ))
     .parse_next(input)?;
 
-    // } block delimiter should be handled by the string parser
-    if tokens.len() == 1 && matches!(tokens[0], Token::BlockDelimeter('}', true)) {
-        return Err(ContextError::new());
-    }
-
     Ok(tokens)
 }
 
-pub fn tokenize<'s>(input: &mut &'s str) -> Result<Vec<Token<'s>>> {
+pub fn tokenize<'s>(input: &mut Stream<'s>) -> Result<Vec<Token<'s>>> {
     println!("call \"{input}\"");
     let t: Vec<Vec<Token<'s>>> = repeat(.., token).parse_next(input)?;
 
