@@ -5,29 +5,43 @@ use winnow::{Parser, Result, Stateful, ascii::{alphanumeric1, dec_int, }, combin
 pub use crate::lexer::types::*;
 
 #[derive(Debug)]
-pub struct State<'s> {
-    interp_level: &'s mut u32
+pub struct State {
+    interp_level: u32
 }
 
-impl<'s> State<'s> {
+impl Default for State {
+    fn default() -> Self {
+        State {
+            interp_level: 0
+        }
+    }
+}
+
+impl State {
     pub fn is_interpolating(&self) -> bool {
-        *self.interp_level > 0
+        self.interp_level > 0
     }
 
     pub fn increase_interp(&mut self) {
-        *self.interp_level += 1;
+        self.interp_level += 1;
     }
 
     pub fn decrease_interp(&mut self) {
-        if *self.interp_level == 0 {
+        if self.interp_level == 0 {
             panic!("Tried to decrease interpolation level past 0!");
         }
-        *self.interp_level -= 1;
+        self.interp_level -= 1;
     }
 }
 
-type Stream<'is> = Stateful<&'is str, State<'is>>;
+pub type Stream<'is> = Stateful<&'is str, State>;
 
+pub fn new_stream<'s>(input: &mut &'s str) -> Stream<'s> {
+    Stream {
+        input,
+        state: State::default()
+    }
+}
 
 fn block_delimeter<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
     one_of(['(', ')', '[', ']', '{', '}'])
@@ -40,7 +54,8 @@ fn operator<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
         alt(("+", "-", "*", "/", "^")),
         alt((">=", ">", "<=", "<>", "<")),
         alt(("==", "=>", "=", ":=", "::")),
-        alt(("div", "mod"))
+        alt(("div", "mod")),
+        alt(("imprima", "escreva"))
     ))
         .map(|op| Token::Operation(op))
         .parse_next(input)
@@ -81,8 +96,7 @@ fn unknown<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
 
 fn keyword<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
     (alt((
-        alt(("escreva",
-        "imprima",
+        alt((
         "var",
         "em",
         "ou",
@@ -136,15 +150,12 @@ fn identifier<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
 }
 
 fn text<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
-    println!("Retrieving text from \"{input}\"");
     take_till(1.., ['{', '"'])
     .map(|str| Token::StringFragment(str))
     .parse_next(input)
 }
 
 fn interpolation<'s>(input: &mut Stream<'s>) -> Result<Vec<Token<'s>>> {
-    println!("Retrieving interp from \"{input}\"");
-
     input.state.increase_interp();
 
     let tokens: Result<Vec<Vec<Token<'_>>>> = delimited(
@@ -191,7 +202,6 @@ fn string<'s>(input: &mut Stream<'s>) -> Result<Vec<Token<'s>>> {
 }
 
 fn token<'s>(input: &mut Stream<'s>) -> Result<Vec<Token<'s>>> {
-    dbg!(&input);
     if input.state.is_interpolating() {
         not(peek('}'))
         .verify(|_| true)
@@ -225,7 +235,6 @@ fn token<'s>(input: &mut Stream<'s>) -> Result<Vec<Token<'s>>> {
 }
 
 pub fn tokenize<'s>(input: &mut Stream<'s>) -> Result<Vec<Token<'s>>> {
-    println!("call \"{input}\"");
     let t: Vec<Vec<Token<'s>>> = repeat(.., token).parse_next(input)?;
 
     let flattened: Vec<_> = t.iter().flatten().copied().collect();

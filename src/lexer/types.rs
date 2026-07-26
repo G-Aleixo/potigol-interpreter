@@ -1,4 +1,4 @@
-use winnow::stream::ContainsToken;
+use winnow::{stream::{ContainsToken}};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Token<'s> {
@@ -22,6 +22,18 @@ pub enum Token<'s> {
     Operation(&'s str),
     // the "fim" block delimeter is a keyword
     BlockDelimeter(char, bool),
+}
+
+impl<'s> ContainsToken<&Token<'_>> for &Token<'s> {
+    fn contains_token(&self, token: &Token) -> bool {
+        *self == token
+    }
+}
+
+impl<'s> ContainsToken<&Token<'_>> for Token<'s> {
+    fn contains_token(&self, token: &Token) -> bool {
+        self == token
+    }
 }
 
 impl<'s> ContainsToken<Token<'_>> for Token<'s> {

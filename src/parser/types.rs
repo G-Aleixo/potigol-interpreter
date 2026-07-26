@@ -1,25 +1,44 @@
-#[derive(Clone)]
-pub enum Expr {
+#[derive(Clone, PartialEq)]
+pub enum Expr<'s> {
     Literal(Value),
-    String(Vec<StringPart>),
-    Variable(String),
-    Binary(Box<Expr>, BinOp, Box<Expr>),
-    Unary(UnaryOp, Box<Expr>),
-    Ternary(Box<Expr>, Vec<Stmt>, Vec<Stmt>),
-    While(Box<Expr>, Vec<Stmt>),
-    For(String, Box<Expr>, Box<Expr>, Box<Expr>, Vec<Stmt>),
-    Call(String, Vec<Expr>),
-    Lambda(Vec<String>, Box<Expr>), // argument names, expression
-    CommaSeparated(Vec<Expr>),
-    List(Vec<Expr>),
-    Tuple(Vec<Expr>),
+    String(Vec<StringPart<'s>>),
+    Identifier(&'s str),
+    Binary {
+        lhs: Box<Expr<'s>>,
+        op: BinOp,
+        rhs: Box<Expr<'s>>
+    },
+    Unary {
+        op: UnaryOp,
+        expr: Box<Expr<'s>>
+    },
+    Ternary {
+        cond: Box<Expr<'s>>,
+        if_true: Vec<Stmt<'s>>,
+        if_false: Vec<Stmt<'s>>
+    },
+    While {
+        cond: Box<Expr<'s>>,
+        stmts: Vec<Stmt<'s>>
+    },
+    For {
+        control: &'s str, 
+        start: Box<Expr<'s>>,
+        end: Box<Expr<'s>>,
+        step: Box<Expr<'s>>,
+        stmts: Vec<Stmt<'s>>
+    },
+    Call(&'s str, Vec<Expr<'s>>),
+    Lambda(Vec<&'s str>, Box<Expr<'s>>), // argument names, Expr<'s>ession
+    List(Vec<Expr<'s>>),
+    Tuple(Vec<Expr<'s>>),
 }
 
-#[derive(Debug, Clone)]
-pub enum Stmt {
-    ConstAssignment(Expr),
-    VarAssignment(Expr),
-    ExprStmt(Expr),
+#[derive(Debug, Clone, PartialEq)]
+pub enum Stmt<'s> {
+    ConstAssignment(Expr<'s>),
+    VarAssignment(Expr<'s>),
+    ExprStmt(Expr<'s>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -43,9 +62,10 @@ pub enum BinOp {
     Less,
     LessOrEqual,
     Index,
+    Call,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOp {
     Plus,
     Minus,
@@ -54,80 +74,83 @@ pub enum UnaryOp {
     Print,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Integer(i64),
     Float(f64),
     Boolean(bool),
 }
 
-#[derive(Debug, Clone)]
-pub enum StringPart {
-    Fragment(String),
-    Expr(Expr)
+#[derive(Debug, Clone, PartialEq)]
+pub enum StringPart<'s> {
+    Fragment(&'s str),
+    Expr(Expr<'s>)
 }
 
-impl From<&String> for BinOp {
-    fn from(value: &String) -> Self {
-        match value.as_ref() {
-            "=" => Self::ConstAssignment,
-            ":=" => Self::VarAssignment,
-            "+" => Self::Plus,
-            "-" => Self::Minus,
-            "*" => Self::Mult,
-            "/" => Self::Div,
-            "^" => Self::Pow,
-            "div" => Self::IntDiv,
-            "mod" => Self::Mod,
-            "e" => Self::And,
-            "ou" => Self::Or,
-            "." => Self::DotAccess,
-            "==" => Self::Equal,
-            "<>" => Self::NotEqual,
-            ">" => Self::Greater,
-            ">=" => Self::GreaterOrEqual,
-            "<" => Self::Less,
-            "<=" => Self::LessOrEqual,
-            "[" => Self::Index,
-            v => panic!("Invalid infix operator {v}"),
+impl TryFrom<&str> for BinOp {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "=" => Ok(Self::ConstAssignment),
+            ":=" => Ok(Self::VarAssignment),
+            "+" => Ok(Self::Plus),
+            "-" => Ok(Self::Minus),
+            "*" => Ok(Self::Mult),
+            "/" => Ok(Self::Div),
+            "^" => Ok(Self::Pow),
+            "div" => Ok(Self::IntDiv),
+            "mod" => Ok(Self::Mod),
+            "e" => Ok(Self::And),
+            "ou" => Ok(Self::Or),
+            "." => Ok(Self::DotAccess),
+            "==" => Ok(Self::Equal),
+            "<>" => Ok(Self::NotEqual),
+            ">" => Ok(Self::Greater),
+            ">=" => Ok(Self::GreaterOrEqual),
+            "<" => Ok(Self::Less),
+            "<=" => Ok(Self::LessOrEqual),
+            "[" => Ok(Self::Index),
+            _ => Err(()),
         }
     }
 }
 
-impl From<&String> for UnaryOp {
-    fn from(value: &String) -> Self {
-        match value.as_ref() {
-            "+" => Self::Plus,
-            "-" => Self::Minus,
-            "não" => Self::Not,
-            "imprima" => Self::Write,
-            "escreva" => Self::Print,
-            v => panic!("Invalid suffix operator {v}"),
+impl TryFrom<&str> for UnaryOp {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "+" => Ok(Self::Plus),
+            "-" => Ok(Self::Minus),
+            "não" => Ok(Self::Not),
+            "imprima" => Ok(Self::Write),
+            "escreva" => Ok(Self::Print),
+            _ => Err(()),
         }
     }
 }
 
-// for S-expression debugging stuff
-impl std::fmt::Debug for Expr {
+// for S-Expr<'s>ession debugging stuff
+impl<'s> std::fmt::Debug for Expr<'s> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Expr::Literal(value) => write!(f, "{value}"),
             Expr::String(string) => write!(f, "{string:?}"),
-            Expr::Variable(var) => write!(f, "{var}"),
-            Expr::Binary(expr1, bin_op, expr2) => write!(f, "({bin_op} {expr1:?} {expr2:?})"),
-            Expr::Unary(unary_op, expr) => write!(f, "({unary_op} {expr:?})"),
-            Expr::Ternary(condition, branch1, branch2) => {
-                write!(f, "{condition:?} {branch1:?} {branch2:?}")
+            Expr::Identifier(var) => write!(f, "{var}"),
+            Expr::Binary{ lhs, op, rhs} => write!(f, "({op} {lhs:?} {rhs:?})"),
+            Expr::Unary{op, expr} => write!(f, "({op} {expr:?})"),
+            Expr::Ternary{cond, if_true, if_false} => {
+                write!(f, "{cond:?} {if_true:?} {if_false:?}")
             }
-            Expr::While(condition, stmts) => {
-                write!(f, "{condition:?} {stmts:?}")
+            Expr::While{cond, stmts} => {
+                write!(f, "{cond:?} {stmts:?}")
             }
-            Expr::For(control_var, start, end, step, stmts) => {
-                write!(f, "{control_var} {start:?} {end:?} {step:?} {stmts:?}")
+            Expr::For{control, start, end, step, stmts} => {
+                write!(f, "{control} {start:?} {end:?} {step:?} {stmts:?}")
             }
             Expr::Call(_, _exprs) => todo!(),
             Expr::Lambda(_items, _expr) => todo!(),
-            Expr::CommaSeparated(exprs) => todo!(),
             Expr::List(_exprs) => todo!(),
             Expr::Tuple(_exprs) => todo!(),
         }
@@ -166,6 +189,7 @@ impl std::fmt::Display for BinOp {
             BinOp::Less => write!(f, "<"),
             BinOp::LessOrEqual => write!(f, "<="),
             BinOp::Index => write!(f, "["),
+            BinOp::Call => write!(f, "(")
         }
     }
 }
