@@ -10,18 +10,24 @@ cargo run -- <path/to/file>
 ```
 
 ## Funcionalidades
+
+### Lexer e Parser
 - [x] Literais
 - [x] Strings
 - [x] F-strings
-- [x] Variáveis com var(semi funcionais)
-- [x] Funções `leia_*`
+- [x] Variáveis com var
+- [x] Variáveis constantes
 - [x] `se`, `senão` e`senãose`
-- [x] `enquanto` e `para`
+- [ ] `enquanto` e `para`
+- [ ] Atribuição paralela
 - [ ] Tipagem
-- [ ]  Listas e tuplas
+- [ ] Listas e tuplas
 - [ ] Definição de função
 - [ ] POO
 - [ ] Métodos
 - [ ] Aspectos de programação funcional
 - [ ] `gere`
 - [ ] ...
+
+### Interpredor
+- Em reconstrução...
