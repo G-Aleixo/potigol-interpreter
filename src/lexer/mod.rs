@@ -101,23 +101,25 @@ fn keyword<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
         "em",
         "ou",
         "não", // ew, a tilde
-        "se")),
-        alt(("então",
-        "senãose",
+        )),
+        alt((
+        "entao",
+        "senaose",
         "senao",
+        "se",
         "fim",
         "escolha",
         "caso",
         "para",
-        "de",
-        "até")),
+        "de",)),
+        alt(("até",
         "faça",
         "passo",
         "enquanto",
         "e",
         "retorne",
         "tipo",
-        "gere",
+        "gere",))
     )),
     peek(not(alphanumeric1)))
     .map(|(kw, _)| Token::Keyword(kw))

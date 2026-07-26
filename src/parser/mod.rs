@@ -1,6 +1,6 @@
 pub mod types;
 
-use winnow::{ModalResult, Parser, Result, Stateful, ascii::multispace0, combinator::{Postfix, Prefix, alt, cut_err, delimited, dispatch, empty, expression, fail, peek, preceded, repeat}, error::{ContextError, ErrMode}, stream::TokenSlice, token::{any, one_of, take_while}};
+use winnow::{ModalResult, Parser, Result, Stateful, ascii::multispace0, combinator::{Postfix, Prefix, alt, cut_err, delimited, dispatch, seq, opt, empty, expression, fail, peek, preceded, repeat}, error::{ContextError, ErrMode}, stream::TokenSlice, token::{any, one_of, take_while}};
 
 use crate::lexer::Token;
 pub use types::*;
@@ -100,7 +100,7 @@ fn identifier<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextErr
     .parse_next(input)
 }
 
-fn tok(expected: Token) -> impl Parser<TokenSlice<'_, Token<'_>>, Token, ErrMode<ContextError>> {
+fn tok<'s>(expected: Token<'s>) -> impl Parser<TokenSlice<'s, Token<'s>>, Token<'s>, ErrMode<ContextError>> {
     any.verify_map(move |t: &Token| {
         if *t == expected {
             Some(expected)
@@ -110,7 +110,51 @@ fn tok(expected: Token) -> impl Parser<TokenSlice<'_, Token<'_>>, Token, ErrMode
     })
 }
 
-fn expr<'s>(input: &mut Stream<'s>) -> ModalResult<Expr<'s>, > {
+
+fn if_expr<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError>> {
+    seq!(
+        _: tok(Token::Keyword("se")),
+        expr,
+        _: tok(Token::Keyword("entao")),
+        parse,
+        repeat(.., seq!(
+            _: tok(Token::Keyword("senaose")),
+            expr,
+            _: tok(Token::Keyword("entao")),
+            parse
+        )),
+        opt(preceded(
+            tok(Token::Keyword("senao")),
+            parse
+        )),
+        _: tok(Token::Keyword("fim"))
+    )
+    .map(|(cond, true_branch, elseif_branches, else_branch): (Expr<'_>, Vec<Stmt<'_>>, Vec<(Expr<'_>, Vec<Stmt<'_>>)>, Option<Vec<Stmt<'_>>>)| {
+        let mut else_block = else_branch.unwrap_or(vec![]);
+
+        // desugar elseif chain
+        for (cond, then) in elseif_branches.into_iter().rev() {
+            else_block = vec![
+                Stmt::ExprStmt(
+                    Expr::Ternary {
+                        cond: Box::new(cond),
+                        if_true: then,
+                        if_false: else_block
+                    }
+                )
+            ]
+        }
+
+        Expr::Ternary {
+            cond: Box::new(cond),
+            if_true: true_branch,
+            if_false: else_block
+        }
+    })
+    .parse_next(input)
+}
+
+fn expr<'s>(input: &mut Stream<'s>) -> ModalResult<Expr<'s>> {
     fn parser<'s>(precedence: i64) -> impl Parser<Stream<'s>, Expr<'s>, ErrMode<ContextError>> {
         move |i: &mut Stream<'s>| {
             use winnow::combinator::Infix::{Left, Neither, Right};
@@ -122,7 +166,8 @@ fn expr<'s>(input: &mut Stream<'s>) -> ModalResult<Expr<'s>, > {
                         _ => alt((
                             identifier,
                             literal,
-                            string
+                            string,
+                            if_expr
                             // add other expressions here
                         ))
                     },
@@ -139,7 +184,6 @@ fn expr<'s>(input: &mut Stream<'s>) -> ModalResult<Expr<'s>, > {
                         UnaryOp::Write => Prefix(2, |_: &mut _, a| Ok(Expr::Unary { op: UnaryOp::Write, expr: Box::new(a)})),
                         UnaryOp::Print => Prefix(15, |_: &mut _, a| Ok(Expr::Unary { op: UnaryOp::Print, expr: Box::new(a)})),
                         UnaryOp::Not => Prefix(7, |_: &mut _, a| Ok(Expr::Unary { op: UnaryOp::Not, expr: Box::new(a)})),
-                        _ => fail
                     },
                     ws0
                 )
@@ -239,7 +283,7 @@ fn stmt<'s>(input: &mut Stream<'s>) -> Result<Stmt<'s>, ErrMode<ContextError>> {
             _ => None
         }),
         expr.map(|expr| Stmt::ExprStmt(expr)),
-        cut_err(fail)
+        fail
     )).parse_next(input)
 }
 

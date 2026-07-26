@@ -14,13 +14,13 @@ var resultado := 0.0
 
 escreva "calculando resultado..."
 
-se op == "+" então
+se op == "+" entao
   resultado := num1 + num2
-senãose op == "-" então
+senaose op == "-" entao
   resultado := num1 - num2
-senãose op == "*" então
+senaose op == "*" entao
   resultado := num1 * num2
-senãose op == "/" então
+senaose op == "/" entao
   resultado := num1 / num2
 fim
 
