@@ -55,7 +55,8 @@ fn operator<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
         alt((">=", ">", "<=", "<>", "<")),
         alt(("==", "=>", "=", ":=", "::")),
         alt(("div", "mod")),
-        alt(("imprima", "escreva"))
+        alt(("imprima", "escreva")),
+        "."
     ))
         .map(|op| Token::Operation(op))
         .parse_next(input)
@@ -86,7 +87,6 @@ fn literal<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
         '\n'.map(|_| Token::NewLine),
         ':'.map(|_| Token::Colon),
         ','.map(|_| Token::Comma),
-        '.'.map(|_| Token::Period)
     )).parse_next(input)
 }
 

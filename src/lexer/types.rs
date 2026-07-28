@@ -15,7 +15,6 @@ pub enum Token<'s> {
     Boolean(bool),
     NewLine,
     Comma,
-    Period,
     Colon,
     Unknown(char),
     Keyword(&'s str),
