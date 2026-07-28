@@ -151,6 +151,17 @@ fn identifier<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
     .parse_next(input)
 }
 
+//TODO: account for escaped chars
+fn char<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
+    delimited(
+        "'",
+        any,
+        "'"
+    )
+    .map(|c| Token::Character(c))
+    .parse_next(input)
+}
+
 fn text<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
     take_till(1.., ['{', '"'])
     .map(|str| Token::StringFragment(str))
@@ -215,6 +226,7 @@ fn token<'s>(input: &mut Stream<'s>) -> Result<Vec<Token<'s>>> {
             integer,
             float,
             bool,
+            char,
             literal
         )).map(|t| vec![t]),
         alt((

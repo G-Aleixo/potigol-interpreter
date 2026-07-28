@@ -1,6 +1,6 @@
 pub mod types;
 
-use winnow::{ModalResult, Parser, Result, Stateful, ascii::multispace0, combinator::{Postfix, Prefix, alt, cut_err, delimited, dispatch, seq, opt, empty, expression, fail, peek, preceded, repeat}, error::{ContextError, ErrMode}, stream::TokenSlice, token::{any, one_of, take_while}};
+use winnow::{ModalResult, Parser, Result, Stateful, ascii::multispace0, combinator::{Postfix, Prefix, alt, cut_err, delimited, dispatch, empty, expression, fail, opt, peek, preceded, repeat, separated, seq}, error::{ContextError, ErrMode, StrContext, StrContextValue}, stream::TokenSlice, token::{any, one_of, take_while}};
 
 use crate::lexer::Token;
 pub use types::*;
@@ -41,6 +41,7 @@ fn literal<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError>
         &Token::Boolean(b) => empty.value(Expr::Literal(Value::Boolean(b))),
         &Token::Integer(n) => empty.value(Expr::Literal(Value::Integer(n))),
         &Token::Float(f) => empty.value(Expr::Literal(Value::Float(f))),
+        &Token::Character(c) => empty.value(Expr::Literal(Value::Character(c))),
         _ => fail
     )
     .parse_next(input)
@@ -117,32 +118,34 @@ fn if_expr<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError>
         expr,
         _: tok(Token::Keyword("entao")),
         parse,
-        repeat(.., seq!(
+        opt(repeat(0.., seq!(
             _: tok(Token::Keyword("senaose")),
             expr,
             _: tok(Token::Keyword("entao")),
             parse
-        )),
+        ))),
         opt(preceded(
             tok(Token::Keyword("senao")),
             parse
         )),
         _: tok(Token::Keyword("fim"))
     )
-    .map(|(cond, true_branch, elseif_branches, else_branch): (Expr<'_>, Vec<Stmt<'_>>, Vec<(Expr<'_>, Vec<Stmt<'_>>)>, Option<Vec<Stmt<'_>>>)| {
+    .map(|(cond, true_branch, elseif_branches, else_branch): (Expr<'_>, Vec<Stmt<'_>>, Option<Vec<(Expr<'_>, Vec<Stmt<'_>>)>>, Option<Vec<Stmt<'_>>>)| {
         let mut else_block = else_branch.unwrap_or(vec![]);
 
         // desugar elseif chain
-        for (cond, then) in elseif_branches.into_iter().rev() {
-            else_block = vec![
-                Stmt::ExprStmt(
-                    Expr::Ternary {
-                        cond: Box::new(cond),
-                        if_true: then,
-                        if_false: else_block
-                    }
-                )
-            ]
+        if let Some(elseif_branches) = elseif_branches {
+            for (cond, then) in elseif_branches.into_iter().rev() {
+                else_block = vec![
+                    Stmt::ExprStmt(
+                        Expr::Ternary {
+                            cond: Box::new(cond),
+                            if_true: then,
+                            if_false: else_block
+                        }
+                    )
+                ]
+            }
         }
 
         Expr::Ternary {
@@ -151,6 +154,97 @@ fn if_expr<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError>
             if_false: else_block
         }
     })
+    .parse_next(input)
+}
+
+fn while_expr<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError>> {
+    seq!(
+        _: tok(Token::Keyword("enquanto")),
+        expr,
+        _: tok(Token::Keyword("faça")),
+        parse,
+        _: tok(Token::Keyword("fim"))
+    )
+    .map(|(cond, stmts)| {
+        Expr::While {
+            cond: Box::new(cond),
+            stmts
+        }
+    })
+    .parse_next(input)
+}
+
+fn range_for<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError>> {
+    seq!(
+        _: tok(Token::Keyword("para")),
+        separated(1.., seq!(
+            identifier,
+            _: tok(Token::Keyword("de")),
+            expr,
+            _: tok(Token::Keyword("até")),
+            expr,
+            opt(preceded(
+                tok(Token::Keyword("passo")),
+                expr
+            )),
+        ), tok(Token::Comma)),
+        _: tok(Token::Keyword("faça")),
+        parse,
+        _:tok(Token::Keyword("fim")),
+    )
+    .map(|mut forl: (Vec<_>, Vec<Stmt<'_>>)| {
+        let innermost = forl.0.pop().unwrap();
+        let mut for_loop = Expr::RangeFor {
+            control: Box::new(innermost.0),
+            start: Box::new(innermost.1),
+            end: Box::new(innermost.2),
+            step: innermost.3.map(|v| Box::new(v)),
+            stmts: forl.1
+        };
+
+        while let Some(inner) = forl.0.pop() {
+            for_loop = Expr::RangeFor {
+                control: Box::new(inner.0),
+                start: Box::new(inner.1),
+                end: Box::new(inner.2),
+                step: inner.3.map(|v| Box::new(v)),
+                stmts: match for_loop {
+                    Expr::RangeFor { control: _, start: _, end: _, step: _, stmts } => stmts,
+                    _ => panic!("stupid type system")
+                }
+            };
+        };
+
+        for_loop
+    })
+    .parse_next(input)
+}
+
+fn iter_for<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError>> {
+    seq!(
+        _: tok(Token::Keyword("para")),
+        identifier,
+        _: tok(Token::Keyword("em")),
+        expr,
+        _: tok(Token::Keyword("faça")),
+        parse,
+        _:tok(Token::Keyword("fim")),
+    )
+    .map(|forl| {
+        Expr::IterFor {
+            control: Box::new(forl.0),
+            iterator: Box::new(forl.1),
+            stmts: forl.2
+        }
+    })
+    .parse_next(input)
+}
+
+fn for_expr<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError>> {
+    alt((
+        range_for,
+        iter_for
+    ))
     .parse_next(input)
 }
 
@@ -167,7 +261,9 @@ fn expr<'s>(input: &mut Stream<'s>) -> ModalResult<Expr<'s>> {
                             identifier,
                             literal,
                             string,
-                            if_expr
+                            if_expr,
+                            while_expr,
+                            for_expr
                             // add other expressions here
                         ))
                     },
@@ -276,7 +372,7 @@ fn stmt<'s>(input: &mut Stream<'s>) -> Result<Stmt<'s>, ErrMode<ContextError>> {
             },
             _ => None
         }),
-        peek(expr).verify_map(|expr| match expr {
+        expr.verify_map(|expr| match expr {
             Expr::Binary { lhs, op, rhs } if op == BinOp::ConstAssignment => {
                 Some(Stmt::ConstAssignment(Expr::Binary { lhs, op, rhs }))
             },
@@ -294,7 +390,7 @@ pub fn parse<'s>(input: &mut Stream<'s>) -> Result<Vec<Stmt<'s>>, ErrMode<Contex
 
 #[cfg(test)]
 pub mod tests {
-    use winnow::Parser;
+    use winnow::{Parser, stream::TokenSlice};
 
 use crate::{lexer::tokenize, parser::{Expr, StringPart, expr, new_stream, parse, string}};
 
@@ -307,7 +403,7 @@ use crate::{lexer::tokenize, parser::{Expr, StringPart, expr, new_stream, parse,
         let mut new_stream = new_stream(&out1[..]);
         let lit = parse.parse_next(&mut new_stream);
 
-        println!("{new_stream:?}");
+        assert!(new_stream.is_empty());
         assert_eq!(lit, Ok(vec![]));
     }
 }

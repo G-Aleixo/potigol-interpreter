@@ -21,11 +21,16 @@ pub enum Expr<'s> {
         cond: Box<Expr<'s>>,
         stmts: Vec<Stmt<'s>>
     },
-    For {
-        control: &'s str, 
+    RangeFor {
+        control: Box<Expr<'s>>, 
         start: Box<Expr<'s>>,
         end: Box<Expr<'s>>,
-        step: Box<Expr<'s>>,
+        step: Option<Box<Expr<'s>>>,
+        stmts: Vec<Stmt<'s>>
+    },
+    IterFor {
+        control: Box<Expr<'s>>,
+        iterator: Box<Expr<'s>>,
         stmts: Vec<Stmt<'s>>
     },
     Call(&'s str, Vec<Expr<'s>>),
@@ -79,6 +84,7 @@ pub enum Value {
     Integer(i64),
     Float(f64),
     Boolean(bool),
+    Character(char)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -146,8 +152,11 @@ impl<'s> std::fmt::Debug for Expr<'s> {
             Expr::While{cond, stmts} => {
                 write!(f, "{cond:?} {stmts:?}")
             }
-            Expr::For{control, start, end, step, stmts} => {
-                write!(f, "{control} {start:?} {end:?} {step:?} {stmts:?}")
+            Expr::RangeFor{control, start, end, step, stmts} => {
+                write!(f, "{control:?} {start:?} {end:?} {step:?} {stmts:?}")
+            }
+            Expr::IterFor { control, iterator, stmts } => {
+                write!(f, "{control:?} {iterator:?} {stmts:?}")
             }
             Expr::Call(_, _exprs) => todo!(),
             Expr::Lambda(_items, _expr) => todo!(),
@@ -163,6 +172,7 @@ impl std::fmt::Display for Value {
             Value::Integer(int) => write!(f, "{int}"),
             Value::Float(float) => write!(f, "{float}"),
             Value::Boolean(bool) => write!(f, "{bool}"),
+            Value::Character(char) => write!(f, "{char}")
         }
     }
 }
