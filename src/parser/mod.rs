@@ -253,15 +253,26 @@ fn tuple<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError>> 
         tok(Token::BlockDelimeter('(', false)),
         seq!(
             expr,
-            _: tok(Token::Comma),
+            _: delimited(
+                ws0,
+                tok(Token::Comma),
+                ws0
+            ),
             opt(
                 separated(1..,
                     expr,
-                    tok(Token::Comma)
+                    delimited(
+                        ws0,
+                        tok(Token::Comma),
+                        ws0
+                    )
                 )
             ),
         ),
-        cut_err(tok(Token::BlockDelimeter(')', true)))
+        preceded(
+            ws0,
+            cut_err(tok(Token::BlockDelimeter(')', true)))
+        )
     )
     .map(|(first, nexts): (_, Option<Vec<_>>)| {
             let mut values = vec![first];
@@ -277,9 +288,16 @@ fn list<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError>> {
     tok(Token::BlockDelimeter('[', false)),
     separated(0..,
         expr,
-        tok(Token::Comma)
+        delimited(
+            ws0,
+            tok(Token::Comma),
+            ws0
+        )
     ),
-    cut_err(tok(Token::BlockDelimeter(']', true)))
+    preceded(
+        ws0,
+        cut_err(tok(Token::BlockDelimeter(']', true)))
+    )
     )
     .map(Expr::List)
     .parse_next(input)
@@ -432,7 +450,7 @@ pub fn parse<'s>(input: &mut Stream<'s>) -> Result<Vec<Stmt<'s>>, ErrMode<Contex
 pub mod tests {
     use winnow::{Parser, stream::TokenSlice};
 
-use crate::{lexer::tokenize, parser::{Expr, Stmt, StringPart, expr, new_stream, parse, string}};
+use crate::{lexer::tokenize, parser::{Expr, StringPart, expr, new_stream, parse, string}};
 
     #[test]
     fn aa() {
@@ -443,6 +461,7 @@ use crate::{lexer::tokenize, parser::{Expr, Stmt, StringPart, expr, new_stream, 
         let mut new_stream = new_stream(&out1[..]);
         let lit = parse.parse_next(&mut new_stream);
 
+        println!("{new_stream:?}");
         println!("{lit:?}");
 
         assert!(new_stream.is_empty());
