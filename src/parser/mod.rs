@@ -1,6 +1,6 @@
 pub mod types;
 
-use winnow::{ModalResult, Parser, Result, Stateful, ascii::multispace0, combinator::{Postfix, Prefix, alt, cut_err, delimited, dispatch, empty, expression, fail, opt, peek, preceded, repeat, separated, seq, terminated}, error::{ContextError, ErrMode, StrContext, StrContextValue}, stream::TokenSlice, token::{any, one_of, take_while}};
+use winnow::{ModalResult, Parser, Result, combinator::{Postfix, Prefix, alt, cut_err, delimited, dispatch, empty, expression, fail, opt, peek, preceded, repeat, separated, seq}, error::{ContextError, ErrMode}, stream::TokenSlice, token::{any, one_of, take_while}};
 
 use crate::lexer::Token;
 pub use types::*;
@@ -28,9 +28,9 @@ pub fn new_stream<'s>(input: &'s [Token<'s>]) -> Stream<'s> {
     TokenSlice::new(input)
 }
 
-fn newline<'s>(input: &mut Stream<'s>) -> Result<(), ErrMode<ContextError>> {
-    one_of(Token::NewLine).map(|_| ()).parse_next(input)
-}
+// fn newline<'s>(input: &mut Stream<'s>) -> Result<(), ErrMode<ContextError>> {
+//     one_of(Token::NewLine).map(|_| ()).parse_next(input)
+// }
 
 fn ws0<'s>(input: &mut Stream<'s>) -> Result<&'s [Token<'s>], ErrMode<ContextError>> {
     take_while(0.., |t: &Token<'_>| *t == Token::NewLine).parse_next(input)
@@ -448,21 +448,21 @@ pub fn parse<'s>(input: &mut Stream<'s>) -> Result<Vec<Stmt<'s>>, ErrMode<Contex
 
 #[cfg(test)]
 pub mod tests {
-    use winnow::{Parser, stream::TokenSlice};
+    use winnow::{Parser};
 
-use crate::{lexer::tokenize, parser::{Expr, StringPart, expr, new_stream, parse, string}};
+use crate::{lexer::tokenize, parser::{new_stream, parse}};
 
     #[test]
     fn aa() {
-        let mut input = include_str!("../../test3.poti");
+        let mut input = include_str!("../../test4.poti");
 
         let out1 = tokenize(&mut crate::lexer::new_stream(&mut input)).unwrap();
     
         let mut new_stream = new_stream(&out1[..]);
         let lit = parse.parse_next(&mut new_stream);
 
-        println!("{new_stream:?}");
-        println!("{lit:?}");
+        println!("{new_stream:#?}");
+        println!("{lit:#?}");
 
         assert!(new_stream.is_empty());
         assert_eq!(lit, Ok(vec![]));
