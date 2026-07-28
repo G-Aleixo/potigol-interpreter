@@ -1,6 +1,6 @@
 pub mod types;
 
-use winnow::{ModalResult, Parser, Result, Stateful, ascii::multispace0, combinator::{Postfix, Prefix, alt, cut_err, delimited, dispatch, empty, expression, fail, opt, peek, preceded, repeat, separated, seq}, error::{ContextError, ErrMode, StrContext, StrContextValue}, stream::TokenSlice, token::{any, one_of, take_while}};
+use winnow::{ModalResult, Parser, Result, Stateful, ascii::multispace0, combinator::{Postfix, Prefix, alt, cut_err, delimited, dispatch, empty, expression, fail, opt, peek, preceded, repeat, separated, seq, terminated}, error::{ContextError, ErrMode, StrContext, StrContextValue}, stream::TokenSlice, token::{any, one_of, take_while}};
 
 use crate::lexer::Token;
 pub use types::*;
@@ -290,7 +290,7 @@ fn expr<'s>(input: &mut Stream<'s>) -> ModalResult<Expr<'s>> {
         move |i: &mut Stream<'s>| {
             use winnow::combinator::Infix::{Left, Neither, Right};
             expression(
-                delimited(
+                preceded(
                     ws0,
                     dispatch! { peek(any);
                         &Token::BlockDelimeter('(', false) => alt((
@@ -307,8 +307,7 @@ fn expr<'s>(input: &mut Stream<'s>) -> ModalResult<Expr<'s>> {
                             list
                             // add other expressions here
                         ))
-                    },
-                    ws0
+                    }
                 )
             )
             .current_precedence_level(precedence)
@@ -433,7 +432,7 @@ pub fn parse<'s>(input: &mut Stream<'s>) -> Result<Vec<Stmt<'s>>, ErrMode<Contex
 pub mod tests {
     use winnow::{Parser, stream::TokenSlice};
 
-use crate::{lexer::tokenize, parser::{Expr, StringPart, expr, new_stream, parse, string}};
+use crate::{lexer::tokenize, parser::{Expr, Stmt, StringPart, expr, new_stream, parse, string}};
 
     #[test]
     fn aa() {
