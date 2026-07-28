@@ -160,8 +160,12 @@ impl<'s> std::fmt::Debug for Expr<'s> {
             }
             Expr::Call(_, _exprs) => todo!(),
             Expr::Lambda(_items, _expr) => todo!(),
-            Expr::List(_exprs) => todo!(),
-            Expr::Tuple(_exprs) => todo!(),
+            Expr::List(exprs) => {
+                write!(f, "{exprs:?}")
+            },
+            Expr::Tuple(exprs) => {
+                write!(f, "({exprs:?})")
+            },
         }
     }
 }

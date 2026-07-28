@@ -248,6 +248,43 @@ fn for_expr<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError
     .parse_next(input)
 }
 
+fn tuple<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError>> {
+    delimited(
+        tok(Token::BlockDelimeter('(', false)),
+        seq!(
+            expr,
+            _: tok(Token::Comma),
+            opt(
+                separated(1..,
+                    expr,
+                    tok(Token::Comma)
+                )
+            ),
+        ),
+        cut_err(tok(Token::BlockDelimeter(')', true)))
+    )
+    .map(|(first, nexts): (_, Option<Vec<_>>)| {
+            let mut values = vec![first];
+            nexts.map(|mut v| values.append(&mut v));
+
+            Expr::Tuple(values)
+    })
+    .parse_next(input)
+}
+
+fn list<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError>> {
+    delimited(
+    tok(Token::BlockDelimeter('[', false)),
+    separated(0..,
+        expr,
+        tok(Token::Comma)
+    ),
+    cut_err(tok(Token::BlockDelimeter(']', true)))
+    )
+    .map(Expr::List)
+    .parse_next(input)
+}
+
 fn expr<'s>(input: &mut Stream<'s>) -> ModalResult<Expr<'s>> {
     fn parser<'s>(precedence: i64) -> impl Parser<Stream<'s>, Expr<'s>, ErrMode<ContextError>> {
         move |i: &mut Stream<'s>| {
@@ -256,14 +293,18 @@ fn expr<'s>(input: &mut Stream<'s>) -> ModalResult<Expr<'s>> {
                 delimited(
                     ws0,
                     dispatch! { peek(any);
-                        &Token::BlockDelimeter('(', false) => delimited(one_of(&Token::BlockDelimeter('(', false)), parser(0), cut_err(one_of(&Token::BlockDelimeter(')', true)))),
+                        &Token::BlockDelimeter('(', false) => alt((
+                            tuple,
+                            delimited(one_of(&Token::BlockDelimeter('(', false)), parser(0), cut_err(one_of(&Token::BlockDelimeter(')', true)))),
+                        )),
                         _ => alt((
                             identifier,
                             literal,
                             string,
                             if_expr,
                             while_expr,
-                            for_expr
+                            for_expr,
+                            list
                             // add other expressions here
                         ))
                     },
@@ -396,12 +437,14 @@ use crate::{lexer::tokenize, parser::{Expr, StringPart, expr, new_stream, parse,
 
     #[test]
     fn aa() {
-        let mut input = include_str!("../../test.poti");
+        let mut input = include_str!("../../test3.poti");
 
         let out1 = tokenize(&mut crate::lexer::new_stream(&mut input)).unwrap();
     
         let mut new_stream = new_stream(&out1[..]);
         let lit = parse.parse_next(&mut new_stream);
+
+        println!("{lit:?}");
 
         assert!(new_stream.is_empty());
         assert_eq!(lit, Ok(vec![]));
