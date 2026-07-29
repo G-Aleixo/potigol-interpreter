@@ -43,6 +43,11 @@ pub enum Expr<'s> {
 pub enum Stmt<'s> {
     ConstAssignment(Expr<'s>),
     VarAssignment(Expr<'s>),
+    FunctionDeclaration {
+        variables: Vec<(Expr<'s>, Expr<'s>)>, // typed variable
+        return_type: Option<Expr<'s>>,
+        body: Vec<Stmt<'s>>
+    },
     ExprStmt(Expr<'s>),
 }
 
@@ -77,6 +82,7 @@ pub enum UnaryOp {
     Not,
     Write,
     Print,
+    Return,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -132,6 +138,7 @@ impl TryFrom<&str> for UnaryOp {
             "não" => Ok(Self::Not),
             "imprima" => Ok(Self::Write),
             "escreva" => Ok(Self::Print),
+            "retorne" => Ok(Self::Return),
             _ => Err(()),
         }
     }
@@ -216,6 +223,7 @@ impl std::fmt::Display for UnaryOp {
             UnaryOp::Not => write!(f, "!"),
             UnaryOp::Write => write!(f, "imprima"),
             UnaryOp::Print => write!(f, "escreva"),
+            UnaryOp::Return => write!(f, "return")
         }
     }
 }

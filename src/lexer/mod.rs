@@ -56,7 +56,9 @@ fn operator<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
         alt(("==", "=>", "=", ":=", "::")),
         alt(("div", "mod")),
         alt(("imprima", "escreva")),
-        "."
+        ".",
+        alt(("ou", "e")),
+        "retorne"
     ))
         .map(|op| Token::Operation(op))
         .parse_next(input)
@@ -99,7 +101,6 @@ fn keyword<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
         alt((
         "var",
         "em",
-        "ou",
         "não", // ew, a tilde
         )),
         alt((
@@ -116,8 +117,6 @@ fn keyword<'s>(input: &mut Stream<'s>) -> Result<Token<'s>> {
         "faça",
         "passo",
         "enquanto",
-        "e",
-        "retorne",
         "tipo",
         "gere",))
     )),
@@ -222,6 +221,7 @@ fn token<'s>(input: &mut Stream<'s>) -> Result<Vec<Token<'s>>> {
     }
     let tokens = alt((
         alt((
+            keyword,
             operator,
             integer,
             float,
@@ -230,7 +230,6 @@ fn token<'s>(input: &mut Stream<'s>) -> Result<Vec<Token<'s>>> {
             literal
         )).map(|t| vec![t]),
         alt((
-            keyword,
             ptype,
             operator,
             identifier

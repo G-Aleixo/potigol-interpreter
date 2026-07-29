@@ -1,6 +1,6 @@
 pub mod types;
 
-use winnow::{ModalResult, Parser, Result, combinator::{Postfix, Prefix, alt, cut_err, delimited, dispatch, empty, expression, fail, opt, peek, preceded, repeat, separated, seq}, error::{ContextError, ErrMode}, stream::TokenSlice, token::{any, one_of, take_while}};
+use winnow::{ModalResult, Parser, Result, combinator::{Postfix, Prefix, alt, cut_err, delimited, dispatch, empty, expression, fail, opt, peek, preceded, repeat, separated, separated_pair, seq}, error::{ContextError, ErrMode}, stream::TokenSlice, token::{any, one_of, take_while}};
 
 use crate::lexer::Token;
 pub use types::*;
@@ -96,6 +96,16 @@ fn binary_operator<'s>(input: &mut Stream<'s>) -> Result<BinOp, ErrMode<ContextE
 fn identifier<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError>> {
     dispatch!(any;
         &Token::Identifier(id) => empty.value(Expr::Identifier(id)),
+        _ => fail
+    )
+    .parse_next(input)
+}
+
+fn ptype<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError>> {
+    //TODO: also parse identifiers as well, as they may be types
+    // decide to use stateful or not 
+    dispatch!(any;
+        &Token::Type(r#type) => empty.value(Expr::Identifier(r#type)),
         _ => fail
     )
     .parse_next(input)
@@ -220,6 +230,66 @@ fn range_for<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextErro
     .parse_next(input)
 }
 
+fn inline_function_body<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError>> {
+    preceded(
+        tok(Token::Operation("=")),
+        expr
+    ).parse_next(input)
+}
+
+fn function_body<'s>(input: &mut Stream<'s>) -> Result<Vec<Stmt<'s>>, ErrMode<ContextError>> {
+    delimited(
+        ws0,
+        parse,
+        preceded(
+            ws0,
+            cut_err(tok(Token::Keyword("fim")))
+        )
+    ).parse_next(input)
+}
+
+fn function<'s>(input: &mut Stream<'s>) -> Result<Stmt<'s>, ErrMode<ContextError>> {
+    seq!(
+        _: identifier,
+        delimited(
+            tok(Token::BlockDelimeter('(', false)),
+            repeat(..,
+                separated_pair(
+                    identifier,
+                    tok(Token::Colon),
+                    alt((
+                        identifier,
+                        ptype
+                    ))
+                )
+            ),
+            cut_err(tok(Token::BlockDelimeter(')', true)))
+        ),
+        opt(
+            preceded(
+                tok(Token::Colon),
+                alt((
+                    identifier,
+                    ptype
+                ))
+            )
+        ),
+        alt((
+            inline_function_body.map(|expr| vec![Stmt::ExprStmt(expr)]),
+            function_body
+        ))
+
+    )
+    .map(|func: (Vec<_>, _, _)| {
+        Stmt::FunctionDeclaration {
+            variables: func.0,
+            return_type: func.1,
+            body: func.2
+        }
+    })
+    .parse_next(input)
+}
+
 fn iter_for<'s>(input: &mut Stream<'s>) -> Result<Expr<'s>, ErrMode<ContextError>> {
     seq!(
         _: tok(Token::Keyword("para")),
@@ -336,8 +406,9 @@ fn expr<'s>(input: &mut Stream<'s>) -> ModalResult<Expr<'s>> {
                         UnaryOp::Plus => Prefix(15, |_: &mut _, a| Ok(Expr::Unary { op: UnaryOp::Plus, expr: Box::new(a)})),
                         UnaryOp::Minus => Prefix(15, |_: &mut _, a| Ok(Expr::Unary { op: UnaryOp::Minus, expr: Box::new(a)})),
                         UnaryOp::Write => Prefix(2, |_: &mut _, a| Ok(Expr::Unary { op: UnaryOp::Write, expr: Box::new(a)})),
-                        UnaryOp::Print => Prefix(15, |_: &mut _, a| Ok(Expr::Unary { op: UnaryOp::Print, expr: Box::new(a)})),
+                        UnaryOp::Print => Prefix(2, |_: &mut _, a| Ok(Expr::Unary { op: UnaryOp::Print, expr: Box::new(a)})),
                         UnaryOp::Not => Prefix(7, |_: &mut _, a| Ok(Expr::Unary { op: UnaryOp::Not, expr: Box::new(a)})),
+                        UnaryOp::Return => Prefix(0, |_: &mut _, a| Ok(Expr::Unary { op: UnaryOp::Return, expr: Box::new(a)})),
                     },
                     ws0
                 )
@@ -436,6 +507,7 @@ fn stmt<'s>(input: &mut Stream<'s>) -> Result<Stmt<'s>, ErrMode<ContextError>> {
             },
             _ => None
         }),
+        function,
         expr.map(|expr| Stmt::ExprStmt(expr)),
         fail
     )).parse_next(input)
