@@ -1,6 +1,6 @@
 pub mod types;
 
-use winnow::{Parser, Result, Stateful, ascii::{alphanumeric1, dec_int, }, combinator::{alt, delimited, not, peek, repeat}, token::{any, one_of, take_till, take_while}};
+use winnow::{Parser, Result, Stateful, ascii::{alphanumeric1, dec_int, newline, }, combinator::{alt, delimited, not, peek, preceded, repeat, repeat_till}, token::{any, one_of, take_till, take_until, take_while}};
 
 pub use crate::lexer::types::*;
 
@@ -213,6 +213,15 @@ fn string<'s>(input: &mut Stream<'s>) -> Result<Vec<Token<'s>>> {
     Ok(string)
 }
 
+fn comment<'s>(input: &mut Stream<'s>) -> Result<()> {
+    preceded(
+        "#",
+        repeat_till(.., any, newline)
+    )
+    .map(|_: (Vec<_>, _)| ())
+    .parse_next(input)
+} 
+
 fn token<'s>(input: &mut Stream<'s>) -> Result<Vec<Token<'s>>> {
     if input.state.is_interpolating() {
         not(peek('}'))
@@ -240,6 +249,8 @@ fn token<'s>(input: &mut Stream<'s>) -> Result<Vec<Token<'s>>> {
         block_delimeter.map(|t| vec![t]),
         
         winnow::ascii::multispace1.map(|_| vec![]),
+        comment.map(|_| vec![]),
+
         unknown.map(|t| vec![t])
     ))
     .parse_next(input)?;
